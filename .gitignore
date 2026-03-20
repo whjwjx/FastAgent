@@ -1,0 +1,79 @@
+# =========================
+# Operating System Files
+# =========================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# =========================
+# IDEs and Editors
+# =========================
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# =========================
+# Python (Backend)
+# =========================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Distribution / packaging / logs
+build/
+dist/
+*.egg-info/
+*.egg
+*.log
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# =========================
+# Node.js / Expo (Frontend)
+# =========================
+node_modules/
+npm-debug.log
+yarn-error.log
+yarn-debug.log*
+pnpm-debug.log*
+
+# Expo specific
+.expo/
+dist/
+web-build/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# macOS / iOS (React Native)
+*.xcworkspace
+!default.xcworkspace
+Pods/
+
+# Android (React Native)
+.gradle/
+local.properties
+*.iml
