@@ -10,7 +10,9 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7 # 7 days
     
-    ARK_API_KEY: Optional[str] = None
+    LLM_API_KEY: Optional[str] = None
+    LLM_BASE_URL: str = "https://ark.cn-beijing.volces.com/api/v3"
+    LLM_MODEL: str = "doubao-1-5-lite-32k-250115"
     
     class Config:
         env_file = ".env"

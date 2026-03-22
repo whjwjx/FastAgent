@@ -20,12 +20,12 @@ class AssistantResponse(BaseModel):
     action_taken: str = "chat" # chat, thought, schedule, multiple
 
 def get_openai_client() -> OpenAI:
-    api_key = settings.ARK_API_KEY or os.environ.get("ARK_API_KEY")
+    api_key = settings.LLM_API_KEY or os.environ.get("LLM_API_KEY")
     if not api_key:
-        raise HTTPException(status_code=500, detail="ARK_API_KEY is not configured")
+        raise HTTPException(status_code=500, detail="LLM_API_KEY is not configured")
     
     return OpenAI(
-        base_url="https://ark.cn-beijing.volces.com/api/v3",
+        base_url=settings.LLM_BASE_URL,
         api_key=api_key
     )
 
@@ -103,7 +103,7 @@ def ask_assistant(
 
     try:
         completion = client.chat.completions.create(
-            model="doubao-1-5-lite-32k-250115",
+            model=settings.LLM_MODEL,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": request.message},
