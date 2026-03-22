@@ -4,7 +4,7 @@ import { getThoughts } from '../../api/agent';
 import { useIsFocused } from '@react-navigation/native';
 
 export default function ThoughtsScreen() {
-  const [thoughts, setThoughts] = useState<{id: string, content: string, created_at: string}[]>([]);
+  const [thoughts, setThoughts] = useState<{id: string, original_content: string, refined_content?: string, tags?: string, created_at: string}[]>([]);
   const [loading, setLoading] = useState(true);
   const isFocused = useIsFocused();
 
@@ -42,7 +42,8 @@ export default function ThoughtsScreen() {
         keyExtractor={item => item.id.toString()}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Text style={styles.content}>{item.content}</Text>
+            <Text style={styles.content}>{item.original_content}</Text>
+            {item.tags && <Text style={styles.tags}>Tags: {item.tags}</Text>}
             <Text style={styles.date}>{new Date(item.created_at).toLocaleString()}</Text>
           </View>
         )}
@@ -85,6 +86,11 @@ const styles = StyleSheet.create({
   content: {
     fontSize: 16,
     marginBottom: 8,
+  },
+  tags: {
+    fontSize: 12,
+    color: '#007AFF',
+    marginBottom: 4,
   },
   date: {
     fontSize: 12,

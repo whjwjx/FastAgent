@@ -2,16 +2,18 @@ import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { login } from '../../api/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuthStore } from '@/store/authStore';
 
 export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const signIn = useAuthStore((state) => state.signIn);
 
   const handleLogin = async () => {
     try {
       const data = await login(username, password);
-      await AsyncStorage.setItem('userToken', data.access_token);
+      // For MVP, we only store the token. In real app, you might fetch user info here.
+      await signIn(data.access_token);
       router.replace('/(tabs)');
     } catch (error) {
       Alert.alert('Login Failed', 'Incorrect username or password');
