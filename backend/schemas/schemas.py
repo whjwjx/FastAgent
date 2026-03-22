@@ -20,24 +20,43 @@ class Token(BaseModel):
     token_type: str
 
 class ThoughtCreate(BaseModel):
-    content: str
+    original_content: str
+    refined_content: Optional[str] = None
+    tags: Optional[str] = None
+
+class ThoughtUpdate(BaseModel):
+    original_content: Optional[str] = None
+    refined_content: Optional[str] = None
+    tags: Optional[str] = None
 
 class ThoughtResponse(ThoughtCreate):
     id: int
     user_id: int
     created_at: datetime
+    updated_at: datetime
     class Config:
         from_attributes = True
 
 class ScheduleCreate(BaseModel):
     title: str
-    description: Optional[str] = None
     start_time: datetime
     end_time: Optional[datetime] = None
+    location: Optional[str] = None
+    status: Optional[str] = "待办"
+    reminder_time: Optional[datetime] = None
+
+class ScheduleUpdate(BaseModel):
+    title: Optional[str] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    location: Optional[str] = None
+    status: Optional[str] = None
+    reminder_time: Optional[datetime] = None
 
 class ScheduleResponse(ScheduleCreate):
     id: int
     user_id: int
     created_at: datetime
+    updated_at: datetime
     class Config:
         from_attributes = True

@@ -19,9 +19,12 @@ class Thought(Base):
     __tablename__ = "thoughts"
     
     id = Column(Integer, primary_key=True, index=True)
-    content = Column(Text, nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    original_content = Column(Text, nullable=False)
+    refined_content = Column(Text, nullable=True)
+    tags = Column(String, nullable=True)  # Store as comma separated string or JSON
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     
     owner = relationship("User", back_populates="thoughts")
 
@@ -29,11 +32,14 @@ class Schedule(Base):
     __tablename__ = "schedules"
     
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
     title = Column(String, index=True)
-    description = Column(Text, nullable=True)
     start_time = Column(DateTime, nullable=False)
     end_time = Column(DateTime, nullable=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    location = Column(String, nullable=True)
+    status = Column(String, default="待办", index=True) # 待办/已完成/已过期
+    reminder_time = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     
     owner = relationship("User", back_populates="schedules")
