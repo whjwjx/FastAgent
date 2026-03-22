@@ -43,7 +43,7 @@ export default function ThoughtsScreen() {
         renderItem={({ item }) => (
           <View style={styles.card}>
             <Text style={styles.content}>{item.original_content}</Text>
-            {item.tags && <Text style={styles.tags}>Tags: {item.tags}</Text>}
+            {item.tags ? <Text style={styles.tags}>Tags: {item.tags}</Text> : null}
             <Text style={styles.date}>{new Date(item.created_at).toLocaleString()}</Text>
           </View>
         )}

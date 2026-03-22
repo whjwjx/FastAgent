@@ -44,7 +44,7 @@ export default function SchedulesScreen() {
           <View style={styles.card}>
             <Text style={styles.title}>{item.title}</Text>
             <Text style={styles.time}>Time: {new Date(item.start_time).toLocaleString()}</Text>
-            {item.location && <Text style={styles.location}>Location: {item.location}</Text>}
+            {item.location ? <Text style={styles.location}>Location: {item.location}</Text> : null}
             <View style={styles.statusContainer}>
               <Text style={styles.statusText}>{item.status}</Text>
             </View>
