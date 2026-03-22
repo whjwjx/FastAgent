@@ -94,11 +94,15 @@ def ask_assistant(
 ):
     client = get_openai_client()
     
-    # Context info for the LLM
-    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now = datetime.now()
+    weekdays = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]
+    weekday_str = weekdays[now.weekday()]
+    current_time = now.strftime("%Y-%m-%d %H:%M:%S")
+    
     system_prompt = f"""你是个人AI助手，负责处理用户的聊天、记录想法、管理日程。
-当前时间是: {current_time}。
+当前时间是: {current_time}，今天是{weekday_str}。
 请分析用户的意图，如果用户想要记录想法，请调用 record_thought。如果用户想要记录日程，请调用 create_schedule。
+在处理与日期相关的时间词（如“明天”、“本周二”、“下周三”等）时，请务必以“当前时间”和“今天星期几”为基准进行准确的日期推算。
 如果指令信息不全（如日程缺少时间），请追问用户。如果只是普通的聊天，请直接回复。"""
 
     try:
