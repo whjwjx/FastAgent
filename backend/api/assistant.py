@@ -78,32 +78,81 @@ def ask_assistant_stream(
         messages.append({"role": "user", "content": request.message})
         
         try:
-            # 第一轮调用：大模型决定是否调用工具
-            response = client.chat.completions.create(
+            # 第一轮调用：大模型决定是否调用工具，开启流式以便及时返回中间状态
+            stream_initial = client.chat.completions.create(
                 model=routed_model,
                 messages=messages,
                 tools=TOOLS,
                 tool_choice="auto",
-                stream=False  # 第一轮不流式，方便完整获取工具调用
+                stream=True
             )
             
-            response_message = response.choices[0].message
+            tool_calls_accumulator = {}
+            has_tool_calls = False
+            first_round_content = ""
             
-            # 如果没有工具调用，直接流式输出
-            if not response_message.tool_calls:
-                if response_message.content:
-                    yield f"data: {json.dumps({'text': response_message.content}, ensure_ascii=False)}\n\n"
+            for chunk in stream_initial:
+                delta = chunk.choices[0].delta
+                
+                if delta.content:
+                    first_round_content += delta.content
+                    yield f"data: {json.dumps({'text': delta.content}, ensure_ascii=False)}\n\n"
+                    
+                if delta.tool_calls:
+                    has_tool_calls = True
+                    for tc in delta.tool_calls:
+                        index = tc.index
+                        if index not in tool_calls_accumulator:
+                            tool_calls_accumulator[index] = {
+                                "id": "",
+                                "type": "function",
+                                "function": {"name": "", "arguments": ""}
+                            }
+                        
+                        if tc.id:
+                            tool_calls_accumulator[index]["id"] = tc.id
+                        if tc.function:
+                            if tc.function.name:
+                                tool_calls_accumulator[index]["function"]["name"] += tc.function.name
+                                # 当解析到工具名称时，下发中间状态
+                                func_name = tool_calls_accumulator[index]["function"]["name"]
+                                
+                                # 简单映射一下给前端展示的友好名称
+                                tool_name_mapping = {
+                                    "tool_create_thought": "记录想法",
+                                    "tool_read_thoughts": "查询想法",
+                                    "tool_update_thought": "更新想法",
+                                    "tool_delete_thought": "删除想法",
+                                    "tool_create_schedule": "创建日程",
+                                    "tool_read_schedules": "查询日程",
+                                    "tool_update_schedule": "更新日程",
+                                    "tool_delete_schedule": "删除日程"
+                                }
+                                cn_name = tool_name_mapping.get(func_name, func_name)
+                                status_msg = f"正在执行: {cn_name}..."
+                                
+                                yield f"data: {json.dumps({'status': status_msg}, ensure_ascii=False)}\n\n"
+                            if tc.function.arguments:
+                                tool_calls_accumulator[index]["function"]["arguments"] += tc.function.arguments
+
+            # 如果没有工具调用，第一轮流式输出完毕，直接结束
+            if not has_tool_calls:
                 yield "data: [DONE]\n\n"
                 return
 
-            # 如果有工具调用，执行工具并将结果加回对话上下文
-            # 兼容 pydantic 模型转换为字典，处理可能不支持直接序列化的对象
-            messages.append(response_message.model_dump(exclude_none=True))
+            # 如果有工具调用，组装第一轮的回复消息
+            response_message = {
+                "role": "assistant",
+                "content": first_round_content if first_round_content else None,
+                "tool_calls": list(tool_calls_accumulator.values())
+            }
+            messages.append(response_message)
             
-            for tool_call in response_message.tool_calls:
-                function_name = tool_call.function.name
+            # 执行工具并将结果加回对话上下文
+            for index, tool_call in tool_calls_accumulator.items():
+                function_name = tool_call["function"]["name"]
                 try:
-                    function_args = json.loads(tool_call.function.arguments)
+                    function_args = json.loads(tool_call["function"]["arguments"])
                 except json.JSONDecodeError:
                     function_args = {}
                     
@@ -115,19 +164,22 @@ def ask_assistant_stream(
                 # 将工具执行结果添加到消息列表
                 messages.append({
                     "role": "tool",
-                    "tool_call_id": tool_call.id,
+                    "tool_call_id": tool_call["id"],
                     "name": function_name,
                     "content": json.dumps(result, ensure_ascii=False)
                 })
 
             # 第二轮调用：把工具结果给大模型，让它生成最终的自然语言回复（流式）
-            stream = client.chat.completions.create(
+            # 清除中间状态
+            yield f"data: {json.dumps({'status': ''}, ensure_ascii=False)}\n\n"
+            
+            stream_final = client.chat.completions.create(
                 model=routed_model,
                 messages=messages,
                 stream=True
             )
             
-            for chunk in stream:
+            for chunk in stream_final:
                 delta = chunk.choices[0].delta
                 if delta.content:
                     yield f"data: {json.dumps({'text': delta.content}, ensure_ascii=False)}\n\n"

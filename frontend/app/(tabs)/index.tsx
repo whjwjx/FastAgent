@@ -4,7 +4,7 @@ import { createChatStream } from '../../api/agent';
 import { useAuthStore } from '../../store/authStore';
 
 export default function ChatScreen() {
-  const [messages, setMessages] = useState<{id: string, text: string, sender: 'user'|'agent'}[]>([]);
+  const [messages, setMessages] = useState<{id: string, text: string, sender: 'user'|'agent', status?: string}[]>([]);
   const [inputText, setInputText] = useState('');
   const { token } = useAuthStore();
   const flatListRef = useRef<FlatList>(null);
@@ -14,7 +14,7 @@ export default function ChatScreen() {
 
     const userMsg = { id: Date.now().toString(), text: inputText, sender: 'user' as const };
     const agentMsgId = (Date.now() + 1).toString();
-    const agentMsg = { id: agentMsgId, text: '', sender: 'agent' as const };
+    const agentMsg = { id: agentMsgId, text: '', sender: 'agent' as const, status: '正在思考...' };
     
     setMessages(prev => [...prev, userMsg, agentMsg]);
     setInputText('');
@@ -30,23 +30,28 @@ export default function ChatScreen() {
     const es = createChatStream(userMsg.text, token, history);
     
     es.addEventListener('message', (event) => {
-      // The react-native-sse library may not automatically close the connection 
-      // when the server ends the stream without a specific [DONE] marker,
-      // or we might need to rely on the server sending a specific signal.
       if (event.data === '[DONE]') {
+        setMessages(prev => prev.map(msg => 
+          msg.id === agentMsgId ? { ...msg, status: '' } : msg
+        ));
         es.close();
         return;
       }
       try {
         const data = JSON.parse(event.data || '{}');
-        if (data.text) {
+        if (data.text !== undefined) {
           setMessages(prev => prev.map(msg => 
-            msg.id === agentMsgId ? { ...msg, text: msg.text + data.text } : msg
+            msg.id === agentMsgId ? { ...msg, text: msg.text + data.text, status: data.text ? '' : msg.status } : msg
+          ));
+        }
+        if (data.status !== undefined) {
+          setMessages(prev => prev.map(msg => 
+            msg.id === agentMsgId ? { ...msg, status: data.status } : msg
           ));
         }
         if (data.error) {
           setMessages(prev => prev.map(msg => 
-            msg.id === agentMsgId ? { ...msg, text: msg.text + "\nError: " + data.error } : msg
+            msg.id === agentMsgId ? { ...msg, text: msg.text + "\nError: " + data.error, status: '' } : msg
           ));
           es.close();
         }
@@ -85,9 +90,16 @@ export default function ChatScreen() {
           keyExtractor={item => item.id}
           renderItem={({ item }) => (
             <View style={[styles.messageBubble, item.sender === 'user' ? styles.userBubble : styles.agentBubble]}>
-              <Text style={[styles.messageText, item.sender === 'user' ? styles.userText : styles.agentText]}>
-                {item.text}
-              </Text>
+              {item.text ? (
+                <Text style={[styles.messageText, item.sender === 'user' ? styles.userText : styles.agentText]}>
+                  {item.text}
+                </Text>
+              ) : null}
+              {item.status ? (
+                <Text style={[styles.statusText, item.text ? styles.statusTextWithMargin : null]}>
+                  {item.status}
+                </Text>
+              ) : null}
             </View>
           )}
           contentContainerStyle={styles.listContent}
@@ -141,6 +153,14 @@ const styles = StyleSheet.create({
   },
   agentText: {
     color: '#000',
+  },
+  statusText: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  statusTextWithMargin: {
+    marginTop: 8,
   },
   inputContainer: {
     flexDirection: 'row',
