@@ -3,7 +3,10 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import os
 import json
+import logging
 from openai import OpenAI
+
+logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session
 from datetime import datetime, date, timezone
 import zoneinfo
@@ -116,9 +119,13 @@ def ask_assistant_stream(
 在处理与日期相关的时间词（如“明天”、“本周二”、“下周三”等）时，请务必以“当前时间”和“今天星期几”为基准进行准确的日期推算。
 如果指令信息不全（如日程缺少时间），请追问用户。如果只是普通的聊天，请直接回复。"""
 
+    logger.info(f"[User ID: {current_user.id}] New stream request: '{request.message}' (TZ: {request.timezone})")
+
     def generate():
         try:
             routed_model = settings.get_routing_model(request.message)
+            logger.info(f"[User ID: {current_user.id}] Routed to model: {routed_model}")
+            
             stream = client.chat.completions.create(
                 model=routed_model,
                 messages=[
@@ -149,6 +156,7 @@ def ask_assistant_stream(
                             tool_calls[tc.index]["function"]["arguments"] += tc.function.arguments
 
             if tool_calls:
+                logger.info(f"[User ID: {current_user.id}] Model triggered {len(tool_calls)} tool calls.")
                 reply_text = "\n我已经为您执行了以下操作：\n"
                 action_taken = ""
                 for tc in tool_calls:
@@ -156,9 +164,11 @@ def ask_assistant_stream(
                     try:
                         function_args = json.loads(tc["function"]["arguments"])
                     except json.JSONDecodeError:
+                        logger.error(f"[User ID: {current_user.id}] Failed to decode tool arguments: {tc['function']['arguments']}")
                         continue
                     
                     if function_name == "record_thought":
+                        logger.info(f"[User ID: {current_user.id}] Executing tool: record_thought with args: {function_args}")
                         if not action_taken: action_taken = "thought"
                         thought = Thought(
                             user_id=current_user.id,
@@ -168,9 +178,11 @@ def ask_assistant_stream(
                         )
                         db.add(thought)
                         db.commit()
+                        logger.info(f"[User ID: {current_user.id}] Thought recorded successfully. Content preview: {thought.original_content[:20]}...")
                         reply_text += f"- 记录想法: {function_args.get('original_content')[:20]}...\n"
                         
                     elif function_name == "create_schedule":
+                        logger.info(f"[User ID: {current_user.id}] Executing tool: create_schedule with args: {function_args}")
                         if not action_taken: action_taken = "schedule"
                         
                         start_time_str = function_args.get("start_time")
@@ -206,13 +218,18 @@ def ask_assistant_stream(
                         )
                         db.add(schedule)
                         db.commit()
+                        logger.info(f"[User ID: {current_user.id}] Schedule created successfully: {schedule.title}")
                         reply_text += f"- 创建日程: {function_args.get('title')} ({start_time_str})\n"
                 
+                logger.info(f"[User ID: {current_user.id}] Stream completed with actions: {action_taken}")
                 yield f"data: {json.dumps({'text': reply_text, 'action_taken': action_taken}, ensure_ascii=False)}\n\n"
+            else:
+                logger.info(f"[User ID: {current_user.id}] Stream completed as chat without tool calls.")
             
             yield "data: [DONE]\n\n"
             
         except Exception as e:
+            logger.error(f"[User ID: {current_user.id}] Error in generation stream: {str(e)}", exc_info=True)
             yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
@@ -241,8 +258,12 @@ def ask_assistant(
 在处理与日期相关的时间词（如“明天”、“本周二”、“下周三”等）时，请务必以“当前时间”和“今天星期几”为基准进行准确的日期推算。
 如果指令信息不全（如日程缺少时间），请追问用户。如果只是普通的聊天，请直接回复。"""
 
+    logger.info(f"[User ID: {current_user.id}] New standard request: '{request.message}' (TZ: {request.timezone})")
+
     try:
         routed_model = settings.get_routing_model(request.message)
+        logger.info(f"[User ID: {current_user.id}] Routed to model: {routed_model}")
+        
         completion = client.chat.completions.create(
             model=routed_model,
             messages=[
@@ -256,14 +277,20 @@ def ask_assistant(
         response_message = completion.choices[0].message
         
         if response_message.tool_calls:
+            logger.info(f"[User ID: {current_user.id}] Model triggered {len(response_message.tool_calls)} tool calls.")
             action_taken = "multiple" if len(response_message.tool_calls) > 1 else ""
             reply_text = "我已经为您执行了以下操作：\n"
             
             for tool_call in response_message.tool_calls:
                 function_name = tool_call.function.name
-                function_args = json.loads(tool_call.function.arguments)
+                try:
+                    function_args = json.loads(tool_call.function.arguments)
+                except json.JSONDecodeError:
+                    logger.error(f"[User ID: {current_user.id}] Failed to decode tool arguments: {tool_call.function.arguments}")
+                    continue
                 
                 if function_name == "record_thought":
+                    logger.info(f"[User ID: {current_user.id}] Executing tool: record_thought with args: {function_args}")
                     if not action_taken: action_taken = "thought"
                     thought = Thought(
                         user_id=current_user.id,
@@ -273,9 +300,11 @@ def ask_assistant(
                     )
                     db.add(thought)
                     db.commit()
+                    logger.info(f"[User ID: {current_user.id}] Thought recorded successfully. Content preview: {thought.original_content[:20]}...")
                     reply_text += f"- 记录想法: {function_args.get('original_content')[:20]}...\n"
                     
                 elif function_name == "create_schedule":
+                    logger.info(f"[User ID: {current_user.id}] Executing tool: create_schedule with args: {function_args}")
                     if not action_taken: action_taken = "schedule"
                     
                     start_time_str = function_args.get("start_time")
@@ -312,12 +341,16 @@ def ask_assistant(
                     )
                     db.add(schedule)
                     db.commit()
+                    logger.info(f"[User ID: {current_user.id}] Schedule created successfully: {schedule.title}")
                     reply_text += f"- 创建日程: {function_args.get('title')} ({start_time_str})\n"
-                    
+                
+            logger.info(f"[User ID: {current_user.id}] Request completed with actions: {action_taken}")
             return AssistantResponse(reply=reply_text, action_taken=action_taken)
             
         else:
+            logger.info(f"[User ID: {current_user.id}] Request completed as chat without tool calls.")
             return AssistantResponse(reply=response_message.content, action_taken="chat")
             
     except Exception as e:
+        logger.error(f"[User ID: {current_user.id}] Error in standard request: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
