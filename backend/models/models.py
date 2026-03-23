@@ -41,6 +41,7 @@ class Thought(Base):
     tags = Column(StringArray, nullable=True)  # Store as PostgreSQL ARRAY or JSON
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    is_deleted = Column(Boolean, default=False, index=True)
     
     owner = relationship("User", back_populates="thoughts")
 
@@ -57,5 +58,6 @@ class Schedule(Base):
     reminder_time = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    is_deleted = Column(Boolean, default=False, index=True)
     
     owner = relationship("User", back_populates="schedules")

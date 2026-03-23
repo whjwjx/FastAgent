@@ -7,7 +7,7 @@ export const sendChatMessage = async (message: string) => {
   return response.data;
 };
 
-export const createChatStream = (message: string, token: string) => {
+export const createChatStream = (message: string, token: string, history: any[] = []) => {
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   // Use client.defaults.baseURL to construct full URL
   const url = `${client.defaults.baseURL}/assistant/stream`;
@@ -18,7 +18,7 @@ export const createChatStream = (message: string, token: string) => {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     },
-    body: JSON.stringify({ message, timezone })
+    body: JSON.stringify({ message, timezone, history })
   });
 };
 

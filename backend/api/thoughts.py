@@ -23,7 +23,7 @@ def get_thoughts(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    query = db.query(Thought).filter(Thought.user_id == current_user.id)
+    query = db.query(Thought).filter(Thought.user_id == current_user.id, Thought.is_deleted == False)
     if keyword:
         query = query.filter(
             (Thought.original_content.ilike(f"%{keyword}%")) | 
@@ -41,7 +41,7 @@ def update_thought(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    db_thought = db.query(Thought).filter(Thought.id == thought_id, Thought.user_id == current_user.id).first()
+    db_thought = db.query(Thought).filter(Thought.id == thought_id, Thought.user_id == current_user.id, Thought.is_deleted == False).first()
     if not db_thought:
         raise HTTPException(status_code=404, detail="Thought not found")
         
@@ -55,16 +55,16 @@ def update_thought(
 
 @router.delete("/{thought_id}")
 def delete_thought(thought_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_thought = db.query(Thought).filter(Thought.id == thought_id, Thought.user_id == current_user.id).first()
+    db_thought = db.query(Thought).filter(Thought.id == thought_id, Thought.user_id == current_user.id, Thought.is_deleted == False).first()
     if not db_thought:
         raise HTTPException(status_code=404, detail="Thought not found")
         
-    db.delete(db_thought)
+    db_thought.is_deleted = True
     db.commit()
     return {"message": "Thought deleted successfully"}
 
 @router.delete("/")
 def clear_thoughts(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db.query(Thought).filter(Thought.user_id == current_user.id).delete()
+    db.query(Thought).filter(Thought.user_id == current_user.id, Thought.is_deleted == False).update({"is_deleted": True})
     db.commit()
     return {"message": "All thoughts cleared successfully"}

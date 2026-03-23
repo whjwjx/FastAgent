@@ -21,9 +21,18 @@ export default function ChatScreen() {
 
     if (!token) return;
 
-    const es = createChatStream(userMsg.text, token);
+    // Convert local messages to OpenAI history format (last 10 messages to save tokens)
+    const history = messages.slice(-10).map(m => ({
+      role: m.sender === 'user' ? 'user' : 'assistant',
+      content: m.text
+    }));
+
+    const es = createChatStream(userMsg.text, token, history);
     
     es.addEventListener('message', (event) => {
+      // The react-native-sse library may not automatically close the connection 
+      // when the server ends the stream without a specific [DONE] marker,
+      // or we might need to rely on the server sending a specific signal.
       if (event.data === '[DONE]') {
         es.close();
         return;
@@ -48,10 +57,18 @@ export default function ChatScreen() {
 
     es.addEventListener('error', (event) => {
       console.error('SSE Error:', event);
-      setMessages(prev => prev.map(msg => 
-        msg.id === agentMsgId && msg.text === '' ? { ...msg, text: "Error: Could not connect to AI" } : msg
-      ));
+      // In EventSource, an error event usually indicates a connection drop or server close.
+      // We should close the stream to prevent automatic reconnection attempts which cause repeated messages.
       es.close();
+      
+      // Only set error message if we haven't received any text yet
+      setMessages(prev => {
+        const msg = prev.find(m => m.id === agentMsgId);
+        if (msg && msg.text === '') {
+          return prev.map(m => m.id === agentMsgId ? { ...m, text: "Error: Connection lost or server error" } : m);
+        }
+        return prev;
+      });
     });
   };
 
@@ -83,6 +100,9 @@ export default function ChatScreen() {
             value={inputText}
             onChangeText={setInputText}
             placeholder="Talk to your AI Assistant..."
+            onSubmitEditing={handleSend}
+            returnKeyType="send"
+            blurOnSubmit={false}
           />
           <Button title="Send" onPress={handleSend} />
         </View>

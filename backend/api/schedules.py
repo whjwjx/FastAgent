@@ -25,7 +25,7 @@ def get_schedules(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    query = db.query(Schedule).filter(Schedule.user_id == current_user.id)
+    query = db.query(Schedule).filter(Schedule.user_id == current_user.id, Schedule.is_deleted == False)
     
     if view_type != "all" and target_date:
         if view_type == "day":
@@ -46,7 +46,7 @@ def update_schedule(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    db_schedule = db.query(Schedule).filter(Schedule.id == schedule_id, Schedule.user_id == current_user.id).first()
+    db_schedule = db.query(Schedule).filter(Schedule.id == schedule_id, Schedule.user_id == current_user.id, Schedule.is_deleted == False).first()
     if not db_schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
         
@@ -60,10 +60,10 @@ def update_schedule(
 
 @router.delete("/{schedule_id}")
 def delete_schedule(schedule_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_schedule = db.query(Schedule).filter(Schedule.id == schedule_id, Schedule.user_id == current_user.id).first()
+    db_schedule = db.query(Schedule).filter(Schedule.id == schedule_id, Schedule.user_id == current_user.id, Schedule.is_deleted == False).first()
     if not db_schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
         
-    db.delete(db_schedule)
+    db_schedule.is_deleted = True
     db.commit()
     return {"message": "Schedule deleted successfully"}
