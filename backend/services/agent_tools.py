@@ -56,6 +56,9 @@ def tool_delete_thought(db: Session, current_user: User, **kwargs):
 
 def tool_create_schedule(db: Session, current_user: User, user_tz=timezone.utc, **kwargs):
     start_time_str = kwargs.get("start_time")
+    if start_time_str and len(start_time_str) == 10:
+        start_time_str += "T07:00:00"
+    
     try:
         start_time = datetime.fromisoformat(start_time_str)
         if start_time.tzinfo is None:
@@ -75,6 +78,8 @@ def tool_create_schedule(db: Session, current_user: User, user_tz=timezone.utc, 
     
     end_time_str = kwargs.get("end_time")
     if end_time_str:
+        if len(end_time_str) == 10:
+            end_time_str += "T07:00:00"
         try:
             end_time = datetime.fromisoformat(end_time_str)
             if end_time.tzinfo is None:
@@ -107,8 +112,11 @@ def tool_update_schedule(db: Session, current_user: User, user_tz=timezone.utc, 
     if "title" in kwargs:
         schedule.title = kwargs["title"]
     if "start_time" in kwargs:
+        start_time_str = kwargs["start_time"]
+        if start_time_str and len(start_time_str) == 10:
+            start_time_str += "T07:00:00"
         try:
-            start_time = datetime.fromisoformat(kwargs["start_time"])
+            start_time = datetime.fromisoformat(start_time_str)
             if start_time.tzinfo is None:
                 start_time = start_time.replace(tzinfo=user_tz)
             schedule.start_time = start_time.astimezone(timezone.utc)
