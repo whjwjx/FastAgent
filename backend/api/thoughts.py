@@ -30,7 +30,7 @@ def get_thoughts(
             (Thought.refined_content.ilike(f"%{keyword}%"))
         )
     if tag:
-        query = query.filter(Thought.tags.ilike(f"%{tag}%"))
+        query = query.filter(Thought.tags.any(tag))
         
     return query.order_by(Thought.created_at.desc()).all()
 

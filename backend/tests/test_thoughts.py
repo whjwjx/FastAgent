@@ -4,7 +4,7 @@ def test_create_and_get_thoughts(client: TestClient, auth_headers: dict):
     # 1. Create Thought
     thought_data = {
         "original_content": "测试直接调用接口创建的想法",
-        "tags": "API测试"
+        "tags": ["API测试"]
     }
     response = client.post("/api/thoughts/", json=thought_data, headers=auth_headers)
     assert response.status_code == 200

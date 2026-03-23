@@ -13,6 +13,15 @@ class Settings(BaseSettings):
     LLM_API_KEY: Optional[str] = None
     LLM_BASE_URL: str = "https://ark.cn-beijing.volces.com/api/v3"
     LLM_MODEL: str = "doubao-1-5-lite-32k-250115"
+    LLM_MODEL_PRO: str = "doubao-1-5-pro-32k-250115"
+    
+    def get_routing_model(self, text: str) -> str:
+        # 简单的多模型切换架构：
+        # 如果文本较长或包含复杂的指令特征，则使用 PRO 模型以保证提取准确率，否则使用 LITE 模型以降低成本。
+        complex_keywords = ["总结", "分析", "提取", "提取出", "详细", "翻译"]
+        if len(text) > 500 or any(kw in text for kw in complex_keywords):
+            return self.LLM_MODEL_PRO
+        return self.LLM_MODEL
     
     class Config:
         env_file = ".env"

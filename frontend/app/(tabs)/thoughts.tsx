@@ -4,7 +4,7 @@ import { getThoughts } from '../../api/agent';
 import { useIsFocused } from '@react-navigation/native';
 
 export default function ThoughtsScreen() {
-  const [thoughts, setThoughts] = useState<{id: string, original_content: string, refined_content?: string, tags?: string, created_at: string}[]>([]);
+  const [thoughts, setThoughts] = useState<{id: string, original_content: string, refined_content?: string, tags?: string[], created_at: string}[]>([]);
   const [loading, setLoading] = useState(true);
   const isFocused = useIsFocused();
 
@@ -43,7 +43,7 @@ export default function ThoughtsScreen() {
         renderItem={({ item }) => (
           <View style={styles.card}>
             <Text style={styles.content}>{item.original_content}</Text>
-            {item.tags ? <Text style={styles.tags}>Tags: {item.tags}</Text> : null}
+            {item.tags && item.tags.length > 0 ? <Text style={styles.tags}>Tags: {item.tags.join(', ')}</Text> : null}
             <Text style={styles.date}>{new Date(item.created_at).toLocaleString()}</Text>
           </View>
         )}
