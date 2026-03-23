@@ -264,6 +264,7 @@ def ask_assistant(
         routed_model = settings.get_routing_model(request.message)
         logger.info(f"[User ID: {current_user.id}] Routed to model: {routed_model}")
         
+        # 将上下文（提示词+工具）发送给LLM，得到答复
         completion = client.chat.completions.create(
             model=routed_model,
             messages=[
@@ -276,6 +277,7 @@ def ask_assistant(
         
         response_message = completion.choices[0].message
         
+        # 根据回答是否包含工具调用，判断是否需要执行操作
         if response_message.tool_calls:
             logger.info(f"[User ID: {current_user.id}] Model triggered {len(response_message.tool_calls)} tool calls.")
             action_taken = "multiple" if len(response_message.tool_calls) > 1 else ""
