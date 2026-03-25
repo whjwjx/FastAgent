@@ -33,8 +33,8 @@ FastAIStack/
 │   ├── app/                # Expo 页面路由组件
 │   ├── components/         # 共享 UI 组件
 │   └── package.json        # 前端依赖配置
-└── docs/                   # 项目设计与文档目录
-    └── PRD.md              # 核心产品需求文档与架构蓝图
+└── docs/                   # 项目任务与开发进度文档目录
+    └── tasks/              # 每日开发任务记录 (YYYY-MM-DD/xxx.md)
 ```
 
 ---
@@ -46,8 +46,8 @@ FastAIStack/
 ```bash
 cd backend
 # 建议使用虚拟环境：python -m venv venv && source venv/bin/activate
-pip install fastapi uvicorn
-uvicorn main:app --reload --port 8000
+pip install -r requirements.txt
+uvicorn main:app --host 0.0.0.0 --reload --port 8000
 ```
 后端服务启动后，可以访问 `http://localhost:8000/docs` 查看自动生成的 API 接口文档。
 
@@ -77,4 +77,5 @@ npx expo start
 
 ## 🛡️ 许可与规范
 
-请参考项目规范进行开发，并优先阅读 `docs/PRD.md` 了解本项目的详细产品设计与边界约束。
+请参考项目规范进行开发，并优先阅读根目录下的 `AGENTS.md` 了解本项目的详细产品设计、核心工作规范与边界约束。
+
