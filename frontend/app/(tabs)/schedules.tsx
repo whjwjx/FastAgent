@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, FlatList, Text, View, ActivityIndicator, SafeAreaView } from 'react-native';
+import { StyleSheet, FlatList, Text, View, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { getSchedules } from '../../api/agent';
 import { useIsFocused } from '@react-navigation/native';
 

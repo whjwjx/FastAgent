@@ -1,17 +1,32 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
-// For local development, Android emulator needs 10.0.2.2 instead of localhost
-// iOS simulator and Web can use localhost
+// 获取后端的 API Base URL，支持通过环境变量自定义，方便测试与部署
 const getBaseUrl = () => {
-  if (__DEV__) {
-    if (Platform.OS === 'android') {
-      return 'http://10.0.2.2:8000/api';
-    }
-    return 'http://localhost:8000/api';
+  // 1. 如果通过环境变量显式指定了 API URL，优先级最高
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
   }
-  // Production URL here
+
+  // 2. 开发环境下的自动判断逻辑
+  if (__DEV__) {
+    // 尝试从 Expo Constants 获取当前局域网 IP（适用于真机通过 LAN 调试）
+    const debuggerHost = Constants.expoConfig?.hostUri;
+    if (debuggerHost) {
+      const localhost = debuggerHost.split(':')[0];
+      return `http://${localhost}:8000/api`;
+    }
+    
+    // 降级方案：针对模拟器或默认本地环境
+    if (Platform.OS === 'android') {
+      return 'http://10.0.2.2:8000/api'; // Android 模拟器专属别名
+    }
+    return 'http://localhost:8000/api'; // iOS 模拟器或 Web
+  }
+  
+  // 3. 生产环境默认 URL（如果没有配置环境变量）
   return 'https://api.yourdomain.com/api';
 };
 
