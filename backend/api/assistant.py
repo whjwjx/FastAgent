@@ -78,118 +78,118 @@ def ask_assistant_stream(
         messages.append({"role": "user", "content": request.message})
         
         try:
-            # 第一轮调用：大模型决定是否调用工具，开启流式以便及时返回中间状态
-            stream_initial = client.chat.completions.create(
-                model=routed_model,
-                messages=messages,
-                tools=TOOLS,
-                tool_choice="auto",
-                stream=True
-            )
+            # 引入原生 Python 的 ReAct 循环，允许大模型在拿到工具结果后再次判断是否继续调用工具
+            # 最大循环次数限制，防止死循环
+            max_iterations = 10
+            iteration = 0
             
-            tool_calls_accumulator = {}
-            has_tool_calls = False
-            first_round_content = ""
-            
-            for chunk in stream_initial:
-                delta = chunk.choices[0].delta
+            while iteration < max_iterations:
+                iteration += 1
+                logger.info(f"[User ID: {current_user.id}] ReAct loop iteration: {iteration}")
                 
-                if delta.content:
-                    first_round_content += delta.content
-                    yield f"data: {json.dumps({'text': delta.content}, ensure_ascii=False)}\n\n"
+                # 调用大模型，开启流式以便及时返回中间状态和最终文本
+                stream_response = client.chat.completions.create(
+                    model=routed_model,
+                    messages=messages,
+                    tools=TOOLS,
+                    tool_choice="auto",
+                    stream=True
+                )
+                
+                tool_calls_accumulator = {}
+                has_tool_calls = False
+                round_content = ""
+                
+                for chunk in stream_response:
+                    delta = chunk.choices[0].delta
                     
-                if delta.tool_calls:
-                    has_tool_calls = True
-                    for tc in delta.tool_calls:
-                        index = tc.index
-                        if index not in tool_calls_accumulator:
-                            tool_calls_accumulator[index] = {
-                                "id": "",
-                                "type": "function",
-                                "function": {"name": "", "arguments": ""}
-                            }
+                    if delta.content:
+                        round_content += delta.content
+                        # 向前端下发普通文本气泡
+                        yield f"data: {json.dumps({'type': 'text', 'text': delta.content}, ensure_ascii=False)}\n\n"
                         
-                        if tc.id:
-                            tool_calls_accumulator[index]["id"] = tc.id
-                        if tc.function:
-                            if tc.function.name:
-                                tool_calls_accumulator[index]["function"]["name"] += tc.function.name
-                                # 当解析到工具名称时，下发中间状态
-                                func_name = tool_calls_accumulator[index]["function"]["name"]
-                                
-                                # 简单映射一下给前端展示的友好名称
-                                tool_name_mapping = {
-                                    "tool_create_thought": "记录想法",
-                                    "tool_read_thoughts": "查询想法",
-                                    "tool_update_thought": "更新想法",
-                                    "tool_delete_thought": "删除想法",
-                                    "tool_create_schedule": "创建日程",
-                                    "tool_read_schedules": "查询日程",
-                                    "tool_update_schedule": "更新日程",
-                                    "tool_delete_schedule": "删除日程"
+                    if delta.tool_calls:
+                        has_tool_calls = True
+                        for tc in delta.tool_calls:
+                            index = tc.index
+                            if index not in tool_calls_accumulator:
+                                tool_calls_accumulator[index] = {
+                                    "id": "",
+                                    "type": "function",
+                                    "function": {"name": "", "arguments": ""}
                                 }
-                                cn_name = tool_name_mapping.get(func_name, func_name)
-                                status_msg = f"正在执行: {cn_name}..."
-                                
-                                yield f"data: {json.dumps({'status': status_msg}, ensure_ascii=False)}\n\n"
-                            if tc.function.arguments:
-                                tool_calls_accumulator[index]["function"]["arguments"] += tc.function.arguments
+                            
+                            if tc.id:
+                                tool_calls_accumulator[index]["id"] = tc.id
+                            if tc.function:
+                                if tc.function.name:
+                                    tool_calls_accumulator[index]["function"]["name"] += tc.function.name
+                                    # 当解析到工具名称时，下发中间状态作为独立的工具气泡
+                                    func_name = tool_calls_accumulator[index]["function"]["name"]
+                                    
+                                    # 简单映射一下给前端展示的友好名称
+                                    tool_name_mapping = {
+                                        "tool_create_thought": "记录想法",
+                                        "tool_read_thoughts": "查询想法",
+                                        "tool_update_thought": "更新想法",
+                                        "tool_delete_thought": "删除想法",
+                                        "tool_create_schedule": "创建日程",
+                                        "tool_read_schedules": "查询日程",
+                                        "tool_update_schedule": "更新日程",
+                                        "tool_delete_schedule": "删除日程"
+                                    }
+                                    cn_name = tool_name_mapping.get(func_name, func_name)
+                                    status_msg = f"正在执行: {cn_name}..."
+                                    
+                                    yield f"data: {json.dumps({'type': 'tool_status', 'status': status_msg, 'tool_call_id': tool_calls_accumulator[index].get('id', f'temp_{index}')}, ensure_ascii=False)}\n\n"
+                                if tc.function.arguments:
+                                    tool_calls_accumulator[index]["function"]["arguments"] += tc.function.arguments
 
-            # 如果没有工具调用，第一轮流式输出完毕，直接结束
-            if not has_tool_calls:
-                yield "data: [DONE]\n\n"
-                return
+                # 如果本轮没有工具调用，说明大模型认为任务已完成，输出的只是文本
+                if not has_tool_calls:
+                    # 将本轮的助手回复加入上下文（为了完整性，虽然循环即将结束）
+                    if round_content:
+                         messages.append({"role": "assistant", "content": round_content})
+                    break # 退出 ReAct 循环
 
-            # 如果有工具调用，组装第一轮的回复消息
-            response_message = {
-                "role": "assistant",
-                "content": first_round_content if first_round_content else None,
-                "tool_calls": list(tool_calls_accumulator.values())
-            }
-            messages.append(response_message)
-            
-            # 执行工具并将结果加回对话上下文
-            for index, tool_call in tool_calls_accumulator.items():
-                function_name = tool_call["function"]["name"]
-                try:
-                    function_args = json.loads(tool_call["function"]["arguments"])
-                except json.JSONDecodeError:
-                    function_args = {}
-                    
-                logger.info(f"[User ID: {current_user.id}] Executing tool: {function_name} with args: {function_args}")
+                # 如果有工具调用，组装本轮的回复消息加入上下文
+                response_message = {
+                    "role": "assistant",
+                    "content": round_content if round_content else None,
+                    "tool_calls": list(tool_calls_accumulator.values())
+                }
+                messages.append(response_message)
                 
-                # 执行工具
-                result = execute_tool(function_name, db, current_user, user_tz=user_tz, **function_args)
-                
-                # 将工具执行结果添加到消息列表
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call["id"],
-                    "name": function_name,
-                    "content": json.dumps(result, ensure_ascii=False)
-                })
-
-            # 第二轮调用：把工具结果给大模型，让它生成最终的自然语言回复（流式）
-            # 清除中间状态
-            yield f"data: {json.dumps({'status': ''}, ensure_ascii=False)}\n\n"
-            
-            stream_final = client.chat.completions.create(
-                model=routed_model,
-                messages=messages,
-                stream=True
-            )
-            
-            for chunk in stream_final:
-                delta = chunk.choices[0].delta
-                if delta.content:
-                    yield f"data: {json.dumps({'text': delta.content}, ensure_ascii=False)}\n\n"
+                # 执行工具并将结果加回对话上下文
+                for index, tool_call in tool_calls_accumulator.items():
+                    function_name = tool_call["function"]["name"]
+                    try:
+                        function_args = json.loads(tool_call["function"]["arguments"])
+                    except json.JSONDecodeError:
+                        function_args = {}
+                        
+                    logger.info(f"[User ID: {current_user.id}] Executing tool: {function_name} with args: {function_args}")
                     
-            # 发送结束标记给前端
+                    # 执行工具
+                    result = execute_tool(function_name, db, current_user, user_tz=user_tz, **function_args)
+                    
+                    # 将工具执行结果添加到消息列表
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call["id"],
+                        "name": function_name,
+                        "content": json.dumps(result, ensure_ascii=False)
+                    })
+                    
+                    # 可以选择向前端发送工具执行完成的状态
+                    yield f"data: {json.dumps({'type': 'tool_status_done', 'status': f'{function_name} 执行完成', 'tool_call_id': tool_call['id']}, ensure_ascii=False)}\n\n"
+
+            # 循环结束，发送结束标记给前端
             yield "data: [DONE]\n\n"
                     
         except Exception as e:
             logger.error(f"[User ID: {current_user.id}] Error in generate: {str(e)}")
-            yield f"data: {json.dumps({'text': '抱歉，处理您的请求时出现了内部错误，请稍后再试。'}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'text', 'text': '抱歉，处理您的请求时出现了内部错误，请稍后再试。'}, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
