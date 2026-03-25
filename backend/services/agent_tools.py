@@ -45,14 +45,30 @@ def tool_update_thought(db: Session, current_user: User, **kwargs):
     return {"status": "success", "message": f"想法(ID:{thought_id})已更新"}
 
 def tool_delete_thought(db: Session, current_user: User, **kwargs):
-    thought_id = kwargs.get("thought_id")
-    thought = db.query(Thought).filter(Thought.id == thought_id, Thought.user_id == current_user.id, Thought.is_deleted == False).first()
-    if not thought:
-        return {"status": "error", "message": f"未找到ID为{thought_id}的想法"}
+    # 支持单个 thought_id 或多个 thought_ids
+    thought_ids = kwargs.get("thought_ids", [])
+    if "thought_id" in kwargs:
+        thought_ids.append(kwargs.get("thought_id"))
+        
+    if not thought_ids:
+        return {"status": "error", "message": "未提供要删除的想法ID"}
+        
+    thoughts = db.query(Thought).filter(
+        Thought.id.in_(thought_ids), 
+        Thought.user_id == current_user.id, 
+        Thought.is_deleted == False
+    ).all()
     
-    thought.is_deleted = True
+    if not thoughts:
+        return {"status": "error", "message": f"未找到指定的想法"}
+        
+    deleted_count = 0
+    for thought in thoughts:
+        thought.is_deleted = True
+        deleted_count += 1
+        
     db.commit()
-    return {"status": "success", "message": f"想法(ID:{thought_id})已删除"}
+    return {"status": "success", "message": f"成功删除了 {deleted_count} 条想法"}
 
 def tool_create_schedule(db: Session, current_user: User, user_tz=timezone.utc, **kwargs):
     start_time_str = kwargs.get("start_time")
@@ -127,14 +143,30 @@ def tool_update_schedule(db: Session, current_user: User, user_tz=timezone.utc, 
     return {"status": "success", "message": f"日程(ID:{schedule_id})已更新"}
 
 def tool_delete_schedule(db: Session, current_user: User, **kwargs):
-    schedule_id = kwargs.get("schedule_id")
-    schedule = db.query(Schedule).filter(Schedule.id == schedule_id, Schedule.user_id == current_user.id, Schedule.is_deleted == False).first()
-    if not schedule:
-        return {"status": "error", "message": f"未找到ID为{schedule_id}的日程"}
+    # 支持单个 schedule_id 或多个 schedule_ids
+    schedule_ids = kwargs.get("schedule_ids", [])
+    if "schedule_id" in kwargs:
+        schedule_ids.append(kwargs.get("schedule_id"))
+        
+    if not schedule_ids:
+        return {"status": "error", "message": "未提供要删除的日程ID"}
+        
+    schedules = db.query(Schedule).filter(
+        Schedule.id.in_(schedule_ids), 
+        Schedule.user_id == current_user.id, 
+        Schedule.is_deleted == False
+    ).all()
     
-    schedule.is_deleted = True
+    if not schedules:
+        return {"status": "error", "message": f"未找到指定的日程"}
+        
+    deleted_count = 0
+    for schedule in schedules:
+        schedule.is_deleted = True
+        deleted_count += 1
+        
     db.commit()
-    return {"status": "success", "message": f"日程(ID:{schedule_id})已删除"}
+    return {"status": "success", "message": f"成功删除了 {deleted_count} 个日程"}
 
 # Tool Registry
 TOOL_REGISTRY = {
@@ -211,13 +243,17 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "delete_thought",
-            "description": "删除（归档）一条想法",
+            "description": "删除已有的想法，支持批量删除",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "thought_id": {"type": "integer", "description": "要删除的想法ID"}
+                    "thought_ids": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                        "description": "需要删除的想法ID列表，例如：[1, 2, 3]"
+                    }
                 },
-                "required": ["thought_id"]
+                "required": ["thought_ids"]
             }
         }
     },
@@ -269,13 +305,17 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "delete_schedule",
-            "description": "删除（取消）一条日程",
+            "description": "删除（取消）已有的日程，支持批量删除",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "schedule_id": {"type": "integer", "description": "要删除的日程ID"}
+                    "schedule_ids": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                        "description": "要删除的日程ID列表，例如：[1, 2, 3]"
+                    }
                 },
-                "required": ["schedule_id"]
+                "required": ["schedule_ids"]
             }
         }
     }
