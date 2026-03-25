@@ -67,6 +67,7 @@ web-build/
 *.key
 *.mobileprovision
 *.orig.*
+frontend/.env
 
 # macOS / iOS (React Native)
 *.xcworkspace
