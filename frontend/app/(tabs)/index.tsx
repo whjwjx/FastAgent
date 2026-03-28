@@ -1,11 +1,13 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { StyleSheet, TextInput, Button, FlatList, Text, View, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createChatStream, createConfirmStream } from '../../api/agent';
 import { useAuthStore } from '../../store/authStore';
 import ConfirmationBubble from '../../components/ConfirmationBubble';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Markdown from 'react-native-markdown-display';
 
-type Message = {
+export type Message = {
   id: string;
   text: string;
   sender: 'user' | 'agent';
@@ -17,11 +19,44 @@ type Message = {
   isCancelled?: boolean;
 };
 
+const CHAT_HISTORY_KEY = 'chat_history_messages';
+
 export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const { token } = useAuthStore();
   const flatListRef = useRef<FlatList>(null);
+  
+  // Load chat history on mount
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const savedHistory = await AsyncStorage.getItem(CHAT_HISTORY_KEY);
+        if (savedHistory) {
+          setMessages(JSON.parse(savedHistory));
+        }
+      } catch (e) {
+        console.error('Failed to load chat history', e);
+      }
+    };
+    loadHistory();
+  }, []);
+
+  // Save chat history whenever messages change
+  useEffect(() => {
+    const saveHistory = async () => {
+      try {
+        // Only save the last 50 messages to prevent storage overflow
+        const messagesToSave = messages.slice(-50);
+        await AsyncStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messagesToSave));
+      } catch (e) {
+        console.error('Failed to save chat history', e);
+      }
+    };
+    if (messages.length > 0) {
+      saveHistory();
+    }
+  }, [messages]);
 
   const handleStreamEvents = (es: any, agentInitialMsgId: string) => {
     let currentTextMsgId = agentInitialMsgId;
@@ -209,12 +244,27 @@ export default function ChatScreen() {
     handleStreamEvents(es, agentInitialMsgId);
   };
 
+  const handleClearHistory = async () => {
+    try {
+      await AsyncStorage.removeItem(CHAT_HISTORY_KEY);
+      setMessages([]);
+    } catch (e) {
+      console.error('Failed to clear chat history', e);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>FastAIStack Assistant</Text>
+        <TouchableOpacity onPress={handleClearHistory} style={styles.clearBtn}>
+          <Text style={styles.clearBtnText}>Clear</Text>
+        </TouchableOpacity>
+      </View>
       <KeyboardAvoidingView 
-        style={styles.container} 
+        style={styles.keyboardView} 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={90}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         <FlatList
           ref={flatListRef}
@@ -238,13 +288,40 @@ export default function ChatScreen() {
             if (!item.text && !item.status) {
               return null;
             }
-            return (
-              <View style={[styles.messageBubble, item.sender === 'user' ? styles.userBubble : styles.agentBubble]}>
-                {item.text ? (
-                  <Text style={[styles.messageText, item.sender === 'user' ? styles.userText : styles.agentText]}>
-                    {item.text}
-                  </Text>
-                ) : null}
+            const markdownStyles = {
+    body: {
+      fontSize: 16,
+      color: item.sender === 'user' ? '#fff' : '#333',
+      lineHeight: 24,
+    },
+    code_inline: {
+      backgroundColor: item.sender === 'user' ? 'rgba(255,255,255,0.2)' : '#f0f0f0',
+      color: item.sender === 'user' ? '#fff' : '#333',
+      borderRadius: 4,
+      padding: 2,
+      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    },
+    code_block: {
+      backgroundColor: item.sender === 'user' ? 'rgba(255,255,255,0.2)' : '#f0f0f0',
+      color: item.sender === 'user' ? '#fff' : '#333',
+      borderRadius: 8,
+      padding: 10,
+      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    },
+    paragraph: {
+      marginTop: 0,
+      marginBottom: 0,
+    }
+  };
+
+  return (
+    <View style={[styles.messageBubble, item.sender === 'user' ? styles.userBubble : styles.agentBubble]}>
+      {item.text ? (
+        // 使用 react-native-markdown-display 渲染 Markdown
+        <Markdown style={markdownStyles}>
+          {item.text}
+        </Markdown>
+      ) : null}
                 {item.status ? (
                   <Text style={[styles.statusText, item.text ? styles.statusTextWithMargin : null]}>
                     {item.status}
@@ -277,7 +354,32 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F5F7FA',
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  clearBtn: {
+    padding: 6,
+  },
+  clearBtnText: {
+    color: '#FF3B30',
+    fontSize: 14,
   },
   listContent: {
     padding: 16,
