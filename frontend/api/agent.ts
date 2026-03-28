@@ -22,6 +22,27 @@ export const createChatStream = (message: string, token: string, history: any[] 
   });
 };
 
+export const createConfirmStream = (actionId: string, toolCalls: any[], isCancelled: boolean, token: string, history: any[] = []) => {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const url = `${client.defaults.baseURL}/assistant/stream`;
+  
+  return new EventSource(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ 
+      is_confirmation: true,
+      action_id: actionId,
+      tool_calls: toolCalls,
+      is_cancelled: isCancelled,
+      timezone, 
+      history 
+    })
+  });
+};
+
 export const getThoughts = async () => {
   const response = await client.get('/thoughts/');
   return response.data;

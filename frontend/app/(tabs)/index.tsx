@@ -1,39 +1,32 @@
 import { useState, useRef } from 'react';
-import { StyleSheet, TextInput, Button, FlatList, Text, View, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, TextInput, Button, FlatList, Text, View, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { createChatStream } from '../../api/agent';
+import { createChatStream, createConfirmStream } from '../../api/agent';
 import { useAuthStore } from '../../store/authStore';
+import ConfirmationBubble from '../../components/ConfirmationBubble';
+
+type Message = {
+  id: string;
+  text: string;
+  sender: 'user' | 'agent';
+  status?: string;
+  isConfirmation?: boolean;
+  actionId?: string;
+  toolCalls?: any[];
+  isConfirmed?: boolean;
+  isCancelled?: boolean;
+};
 
 export default function ChatScreen() {
-  const [messages, setMessages] = useState<{id: string, text: string, sender: 'user'|'agent', status?: string}[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const { token } = useAuthStore();
   const flatListRef = useRef<FlatList>(null);
 
-  const handleSend = () => {
-    if (!inputText.trim()) return;
-
-    const userMsg = { id: Date.now().toString(), text: inputText, sender: 'user' as const };
-    const agentInitialMsgId = (Date.now() + 1).toString();
-    const initialAgentMsg = { id: agentInitialMsgId, text: '', sender: 'agent' as const, status: '正在思考...' };
-    
-    setMessages(prev => [...prev, userMsg, initialAgentMsg]);
-    setInputText('');
-
-    if (!token) return;
-
-    // Convert local messages to OpenAI history format (last 10 messages to save tokens)
-    const history = messages.slice(-10).map(m => ({
-      role: m.sender === 'user' ? 'user' : 'assistant',
-      content: m.text
-    })).filter(m => m.content); // Only keep messages with text content
-
-    const es = createChatStream(userMsg.text, token, history);
-    
-    // Store the ID of the current text bubble being appended to
+  const handleStreamEvents = (es: any, agentInitialMsgId: string) => {
     let currentTextMsgId = agentInitialMsgId;
     
-    es.addEventListener('message', (event) => {
+    es.addEventListener('message', (event: any) => {
       if (event.data === '[DONE]') {
         setMessages(prev => prev.map(msg => 
           msg.id === currentTextMsgId ? { ...msg, status: '' } : msg
@@ -50,7 +43,6 @@ export default function ChatScreen() {
                 const msgIndex = msgs.findIndex(m => m.id === currentTextMsgId);
                 
                 if (msgIndex !== -1) {
-                    // Update existing text bubble, clear its status
                     msgs[msgIndex] = { 
                         ...msgs[msgIndex], 
                         text: msgs[msgIndex].text + data.text,
@@ -60,31 +52,41 @@ export default function ChatScreen() {
                 return msgs;
             });
         } 
+        else if (data.type === 'tool_confirmation_required') {
+            setMessages(prev => {
+                const msgs = [...prev];
+                // Add a confirmation bubble
+                msgs.push({
+                    id: data.action_id,
+                    text: '',
+                    sender: 'agent',
+                    isConfirmation: true,
+                    actionId: data.action_id,
+                    toolCalls: data.tool_calls
+                });
+                return msgs;
+            });
+        }
         else if (data.type === 'tool_status') {
             const toolMsgId = data.tool_call_id || Date.now().toString();
             setMessages(prev => {
                 const msgs = [...prev];
-                // Check if this tool status already exists
                 const existingIndex = msgs.findIndex(m => m.id === toolMsgId);
                 if (existingIndex !== -1) {
                     msgs[existingIndex] = { ...msgs[existingIndex], status: data.status };
                 } else {
-                    // Create new tool status bubble
-                    msgs.push({ id: toolMsgId, text: '', sender: 'agent' as const, status: data.status });
+                    msgs.push({ id: toolMsgId, text: '', sender: 'agent', status: data.status });
                 }
                 
-                // When we start executing a tool, if we had a text bubble that was just "正在思考...",
-                // we should clear its status or remove it if it's empty
                 const initialMsgIndex = msgs.findIndex(m => m.id === agentInitialMsgId);
                 if (initialMsgIndex !== -1 && msgs[initialMsgIndex].text === '' && msgs[initialMsgIndex].status === '正在思考...') {
                     msgs.splice(initialMsgIndex, 1);
                 }
                 
-                // We need a new text bubble for any future text after a tool call
                 currentTextMsgId = Date.now().toString() + '_text';
                 const hasCurrentTextMsg = msgs.some(m => m.id === currentTextMsgId);
                 if (!hasCurrentTextMsg) {
-                    msgs.push({ id: currentTextMsgId, text: '', sender: 'agent' as const, status: '' });
+                    msgs.push({ id: currentTextMsgId, text: '', sender: 'agent', status: '' });
                 }
                 
                 return msgs;
@@ -101,7 +103,6 @@ export default function ChatScreen() {
                 return msgs;
             });
         }
-        // Fallback for old protocol
         else {
             if (data.text !== undefined) {
               setMessages(prev => prev.map(msg => 
@@ -126,13 +127,9 @@ export default function ChatScreen() {
       }
     });
 
-    es.addEventListener('error', (event) => {
+    es.addEventListener('error', (event: any) => {
       console.error('SSE Error:', event);
-      // In EventSource, an error event usually indicates a connection drop or server close.
-      // We should close the stream to prevent automatic reconnection attempts which cause repeated messages.
       es.close();
-      
-      // Only set error message if we haven't received any text yet
       setMessages(prev => {
         const msg = prev.find(m => m.id === currentTextMsgId);
         if (msg && msg.text === '') {
@@ -141,6 +138,75 @@ export default function ChatScreen() {
         return prev;
       });
     });
+  };
+
+  const handleSend = () => {
+    if (!inputText.trim()) return;
+
+    // 处理遗留的未确认表单（置为已失效）
+    setMessages(prev => {
+      let changed = false;
+      const newMsgs = prev.map(msg => {
+        if (msg.isConfirmation && !msg.isConfirmed && !msg.isCancelled && !msg.status) {
+          changed = true;
+          return { ...msg, status: '已失效', isCancelled: true };
+        }
+        return msg;
+      });
+      
+      // 注意：这里我们仅在前端将状态置灰，
+      // 由于没有真正的回传后端，所以对于 LLM 的上下文来说，这等同于没有发生过。
+      // 这正是我们期望的：如果用户不理会确认框直接说新话，就等于直接开启了新话题。
+      return changed ? newMsgs : prev;
+    });
+
+    const userMsg: Message = { id: Date.now().toString(), text: inputText, sender: 'user' };
+    const agentInitialMsgId = (Date.now() + 1).toString();
+    const initialAgentMsg: Message = { id: agentInitialMsgId, text: '', sender: 'agent', status: '正在思考...' };
+    
+    setMessages(prev => [...prev, userMsg, initialAgentMsg]);
+    setInputText('');
+
+    if (!token) return;
+
+    const history = messages.slice(-10).map(m => ({
+      role: m.sender === 'user' ? 'user' : 'assistant',
+      content: m.text
+    })).filter(m => m.content);
+
+    const es = createChatStream(userMsg.text, token, history);
+    handleStreamEvents(es, agentInitialMsgId);
+  };
+
+  const handleConfirmAction = (msgId: string, actionId: string, toolCalls: any[], isCancelled: boolean) => {
+    // 确保我们发送回后端的 toolCalls 包含 id
+    const processedToolCalls = toolCalls.map((tc, idx) => ({
+      ...tc,
+      id: tc.id || `call_${idx}_${Date.now()}`
+    }));
+
+    // Update local UI state
+    setMessages(prev => prev.map(msg => {
+      if (msg.id === msgId) {
+        return { ...msg, isConfirmed: !isCancelled, isCancelled: isCancelled, status: isCancelled ? '已取消' : '正在执行...' };
+      }
+      return msg;
+    }));
+
+    if (!token) return;
+
+    const history = messages.slice(-10).map(m => ({
+      role: m.sender === 'user' ? 'user' : 'assistant',
+      content: m.text
+    })).filter(m => m.content);
+
+    // Provide a temporary ID for any text the agent will stream back after confirmation
+    const agentInitialMsgId = (Date.now() + 1).toString();
+    const initialAgentMsg: Message = { id: agentInitialMsgId, text: '', sender: 'agent', status: '正在处理...' };
+    setMessages(prev => [...prev, initialAgentMsg]);
+
+    const es = createConfirmStream(actionId, processedToolCalls, isCancelled, token, history);
+    handleStreamEvents(es, agentInitialMsgId);
   };
 
   return (
@@ -155,6 +221,19 @@ export default function ChatScreen() {
           data={messages}
           keyExtractor={item => item.id}
           renderItem={({ item }) => {
+            if (item.isConfirmation) {
+              return (
+                <ConfirmationBubble
+                  toolCalls={item.toolCalls || []}
+                  onConfirm={(selectedToolCalls) => handleConfirmAction(item.id, item.actionId!, selectedToolCalls, false)}
+                  onCancel={() => handleConfirmAction(item.id, item.actionId!, item.toolCalls || [], true)}
+                  status={item.status}
+                  isConfirmed={item.isConfirmed}
+                  isCancelled={item.isCancelled}
+                />
+              );
+            }
+
             // Only render bubble if it has either text or status
             if (!item.text && !item.status) {
               return null;

@@ -4,6 +4,7 @@ from pydantic import BaseModel
 import os
 import json
 import logging
+import uuid
 from openai import OpenAI
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
@@ -20,9 +21,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 class AssistantRequest(BaseModel):
-    message: str
+    message: str = ""
     timezone: str = "UTC"
     history: list = [] # List of previous messages {"role": "...", "content": "..."}
+    
+    # For confirmation (Phase 1)
+    is_confirmation: bool = False
+    action_id: str = None
+    tool_calls: list = []
+    is_cancelled: bool = False
 
 def get_openai_client() -> OpenAI:
     api_key = settings.LLM_API_KEY or os.environ.get("LLM_API_KEY")
@@ -67,7 +74,7 @@ def ask_assistant_stream(
     logger.info(f"[User ID: {current_user.id}] New stream request: '{request.message}' (TZ: {request.timezone})")
 
     def generate():
-        routed_model = settings.get_routing_model(request.message)
+        routed_model = settings.get_routing_model(request.message or "confirm action")
         logger.info(f"[User ID: {current_user.id}] Routed to model: {routed_model}")
         
         messages = [{"role": "system", "content": system_prompt}]
@@ -76,7 +83,42 @@ def ask_assistant_stream(
         if hasattr(request, 'history') and request.history:
             messages.extend(request.history)
             
-        messages.append({"role": "user", "content": request.message})
+        if request.is_confirmation:
+            if request.is_cancelled:
+                messages.append({"role": "system", "content": "系统提示：用户取消了刚才的操作。请直接回复用户已取消。"})
+            else:
+                results = []
+                for tool_call in request.tool_calls:
+                    function_name = tool_call.get("function", {}).get("name", "")
+                    args = tool_call.get("function", {}).get("arguments", {})
+                    if isinstance(args, str):
+                        try:
+                            args = json.loads(args)
+                        except:
+                            args = {}
+                    try:
+                        res = execute_tool(function_name, db, current_user, user_tz=user_tz, **args)
+                        results.append({"name": function_name, "result": res})
+                    except Exception as e:
+                        results.append({"name": function_name, "error": str(e)})
+                
+                # 为了让大模型能正确理解并结束对话，我们需要伪造完整的 function call 历史，而不是仅仅发一个系统提示
+                # 构造 Assistant 的 Tool Call 消息
+                messages.append({
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": request.tool_calls
+                })
+                # 构造对应的 Tool 返回结果消息
+                for i, tool_call in enumerate(request.tool_calls):
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.get("id", f"call_{i}"),
+                        "name": tool_call.get("function", {}).get("name", ""),
+                        "content": json.dumps(results[i] if i < len(results) else {"error": "unknown"}, ensure_ascii=False)
+                    })
+        else:
+            messages.append({"role": "user", "content": request.message})
         
         try:
             # 引入原生 Python 的 ReAct 循环，允许大模型在拿到工具结果后再次判断是否继续调用工具
@@ -160,6 +202,26 @@ def ask_assistant_stream(
                     "tool_calls": list(tool_calls_accumulator.values())
                 }
                 messages.append(response_message)
+                
+                # 检查是否需要用户确认 (增、删、改)
+                requires_confirmation = False
+                for index, tool_call in tool_calls_accumulator.items():
+                    func_name = tool_call["function"]["name"]
+                    if func_name not in ["tool_read_thoughts", "tool_read_schedules"]:
+                        requires_confirmation = True
+                        break
+                
+                if requires_confirmation:
+                    action_id = str(uuid.uuid4())
+                    # 将需要确认的工具列表发给前端
+                    yield f"data: {json.dumps({'type': 'tool_confirmation_required', 'action_id': action_id, 'tool_calls': list(tool_calls_accumulator.values())}, ensure_ascii=False)}\n\n"
+                    # 结束当前流，等待前端调用确认接口
+                    break
+                
+                # 如果是前端确认后回传的请求，在第一次循环中我们实际上已经把结果注入到 system prompt 中了
+                # 这里为了防止模型死循环调用不需要确认的工具，我们仍然保留执行逻辑
+                # 但如果是从前端传回来的已经确认并执行过的工具，不应该再次执行。
+                # 注意：这里我们是在循环中，当前 `tool_calls_accumulator` 是大模型新预测的工具调用，并非前端传回的。
                 
                 # 执行工具并将结果加回对话上下文
                 for index, tool_call in tool_calls_accumulator.items():
