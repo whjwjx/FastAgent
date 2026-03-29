@@ -29,68 +29,36 @@ graph TD
     %% 样式定义 
     classDef frontend fill:#e3f2fd,stroke:#1e88e5,stroke-width:2px; 
     classDef backend fill:#f3e5f5,stroke:#8e24aa,stroke-width:2px; 
-    classDef agent fill:#fff3e0,stroke:#f57c00,stroke-width:2px; 
     classDef external fill:#e8f5e9,stroke:#43a047,stroke-width:2px; 
-    classDef database fill:#eceff1,stroke:#546e7a,stroke-width:2px; 
 
     %% 前端模块 
-    subgraph Frontend [Frontend Expo / React Native - 纯展示与交互层]
-        UI["UI 视图层 (聊天气泡、想法/日程列表)"] 
-        State["状态管理 (Zustand)"] 
-        StreamClient["SSE 客户端 (处理流式响应)"] 
-        
-        UI <--> State 
-        State --> StreamClient 
+    subgraph Frontend [前端 Expo 或 React Native - 展示与交互层]
+        Client["UI 客户端 (状态管理 & SSE)"] 
     end 
     class Frontend frontend; 
 
     %% 后端模块 
-    subgraph Backend [Backend FastAPI - 核心业务与 Agent 中枢]
-        API["API 路由层 (/api/assistant/stream)"] 
-        Auth["鉴权与拦截器 (注入 current_user)"] 
+    subgraph Backend [后端 FastAPI - 核心业务与 Agent 中枢]
+        API["API 路由层"] 
+        Agent["AI Agent 核心引擎"] 
+        Services["业务逻辑与数据库交互"] 
         
-        subgraph AgentEngine [AI Agent 核心引擎 - 纯原生 Python]
-            ContextBuilder["上下文构建器 (注入时间、历史消息)"] 
-            ReActLoop["原生 ReAct 循环 (防死循环拦截)"] 
-            ToolRegistry["工具路由注册表 (agent_tools.py)"] 
-        end 
-        class AgentEngine agent; 
-
-        subgraph BusinessLogic [业务逻辑与工具执行层]
-            ThoughtService["Thoughts CRUD (想法管理)"] 
-            ScheduleService["Schedules CRUD (日程安排)"] 
-        end 
-
-        ORM["SQLAlchemy ORM (强制附加 user_id 实现数据隔离)"] 
-        
-        API --> Auth 
-        Auth --> ContextBuilder 
-        ContextBuilder --> ReActLoop 
-        ReActLoop -- 分发 Tool Calls --> ToolRegistry 
-        ToolRegistry --> ThoughtService 
-        ToolRegistry --> ScheduleService 
-        ThoughtService --> ORM 
-        ScheduleService --> ORM 
+        API <--> Agent 
+        Agent <--> Services 
     end 
     class Backend backend; 
 
-    %% 外部依赖模块 
-    subgraph ExternalServices [外部服务与存储]
-        LLM["大语言模型 API (OpenAI / 兼容模型)"] 
+    %% 外部依赖 
+    subgraph External [外部服务与存储]
+        LLM["大语言模型 (LLM)"] 
         DB[(PostgreSQL 数据库)] 
     end 
-    class LLM external; 
-    class DB database; 
+    class External external; 
 
-    %% 跨模块调用关系 
-    StreamClient -- "HTTP POST (SSE 建立流式连接)" --> API 
-    ReActLoop -- "1. 携带 Tools 与 Prompt 请求大模型" --> LLM 
-    
-    %% 逆向返回流使用虚线
-    LLM -. "2. 返回 Text 文本 或 Tool Calls 工具调用" .-> ReActLoop 
-    ReActLoop -. "3. 实时下发状态 (Text / Tool Status)" .-> StreamClient 
-    
-    ORM <--> DB 
+    %% 调用关系 
+    Client <-->|SSE 流式连接| API 
+    Agent <-->|Prompt & Tool Calls| LLM 
+    Services <--> DB 
 ```
 
 ### 核心特性
