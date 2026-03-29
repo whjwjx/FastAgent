@@ -82,4 +82,11 @@ local.properties
 # Project Documentation
 docs/
 
+# =========================
+# Database
+# =========================
+*.db
+*.sqlite
+*.sqlite3
+
 .trae/
