@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     LLM_MODEL: str = "doubao-1-5-lite-32k-250115"
     LLM_MODEL_PRO: str = "doubao-1-5-pro-32k-250115"
     
+    # Search API
+    TAVILY_API_KEY: Optional[str] = None
+    
     def get_routing_model(self, text: str) -> str:
         # 简单的多模型切换架构：
         # 如果文本较长或包含复杂的指令特征，则使用 PRO 模型以保证提取准确率，否则使用 LITE 模型以降低成本。
