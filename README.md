@@ -1,7 +1,7 @@
 # 🚀 FastAIStack
 
 <p align="center">
-  <img src="docs/design_exports/main_view_chatbot.png" alt="FastAIStack Chatbot" width="300"/>
+  <img src="public/main_view_chatbot.png" alt="FastAIStack Chatbot" width="300"/>
 </p>
 
 <p align="center">
