@@ -1,5 +1,9 @@
 # 🚀 FastAgent
 
+<p align="center">
+  <img src="public/multi_task_agent.png" alt="FastAgent - Multi-Task Agent" width="600"/>
+</p>
+
 FastAgent 是一个基于 **AI Agent 架构** 和 **前后端极致分离理念** 构建的多用户、轻量级 AI 助手平台。
 
 <p align="center">
@@ -127,7 +131,7 @@ npx expo start
 
 本项目将持续迭代，长期发展方向包括但不限于：
 
-- [ ] **� 多 Agent 多任务协同**：引入多 Agent 协作机制，支持复杂任务拆解与并发执行。
+- [ ] **🧠 多 Agent 多任务协同**：引入多 Agent 协作机制，支持复杂任务拆解与并发执行。
 - [ ] **📝 智能博客与知识库管理**：支持自然语言让 AI 将对话/讨论内容自动整理为博客文章并发布，增加独立的用户博客展示页面，打造并维护个人专属数字知识库。
 - [ ] **�🧩 更多 Agent 工具插件**：如天气查询、邮件管理、文件解析（PDF/Excel）等，让 AI 助手包揽所有数字化的日常任务。
 - [ ] **🎨 复杂 UI 的跨端渲染优化**：对于复杂的数据图表或特殊展示页，计划采用 WebView 嵌入纯 Web H5 页面，提升多端一致性与开发效率。
