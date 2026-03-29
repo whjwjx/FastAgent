@@ -90,3 +90,6 @@ docs/
 *.sqlite3
 
 .trae/
+
+# Ignore Agent files
+AGENTS.md
