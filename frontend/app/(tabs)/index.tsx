@@ -165,6 +165,13 @@ export default function ChatScreen() {
     es.addEventListener('error', (event: any) => {
       console.error('SSE Error:', event);
       es.close();
+      
+      // Handle 401 Unauthorized for SSE
+      if (event.xhrStatus === 401) {
+        useAuthStore.getState().signOut();
+        return;
+      }
+
       setMessages(prev => {
         const msg = prev.find(m => m.id === currentTextMsgId);
         if (msg && msg.text === '') {

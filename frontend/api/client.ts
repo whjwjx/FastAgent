@@ -2,6 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import { useAuthStore } from '../store/authStore';
 
 // 获取后端的 API Base URL，支持通过环境变量自定义，方便测试与部署
 const getBaseUrl = () => {
@@ -45,6 +46,20 @@ client.interceptors.request.use(
     return config;
   },
   (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add a response interceptor to handle 401 errors
+client.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  async (error) => {
+    if (error.response && error.response.status === 401) {
+      // Clear token and redirect to login
+      await useAuthStore.getState().signOut();
+    }
     return Promise.reject(error);
   }
 );
