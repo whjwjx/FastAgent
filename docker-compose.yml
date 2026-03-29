@@ -8,8 +8,8 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 123456
-      # Default DB, though we use 'fastAIstackdb' via configuration
-      POSTGRES_DB: fastaistackdb
+      # Default DB, though we use 'fastagentdb' via configuration
+      POSTGRES_DB: fastagentdb
     ports:
       - "15432:5432"
     volumes:

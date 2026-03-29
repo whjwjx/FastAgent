@@ -1,4 +1,4 @@
--- FastAIStack Database Schema Export
+-- FastAgent Database Schema Export
 
 CREATE TABLE users (
 	id SERIAL NOT NULL, 

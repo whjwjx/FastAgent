@@ -1,11 +1,9 @@
-# 🚀 FastAIStack
+# 🚀 FastAgent
+
+FastAgent 是一个基于 **AI Agent 架构** 和 **前后端极致分离理念** 构建的多用户、轻量级 AI 助手平台。
 
 <p align="center">
-  <img src="public/main_view_chatbot.png" alt="FastAIStack Chatbot" width="300"/>
-</p>
-
-<p align="center">
-  <b>基于 AI Agent 架构与前后端极致分离理念构建的多用户、轻量级 AI 助手平台。</b>
+  <img src="public/main_view_chatbot.png" alt="FastAgent Chatbot" width="300"/>
 </p>
 
 <p align="center">

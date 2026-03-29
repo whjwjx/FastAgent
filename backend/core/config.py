@@ -2,10 +2,10 @@ from pydantic_settings import BaseSettings
 from typing import Optional
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "FastAIStack MVP"
+    PROJECT_NAME: str = "FastAgent MVP"
     # To run locally without PostgreSQL easily if needed, we can use SQLite for MVP quick test, but PRD specifies PostgreSQL.
     # We will use SQLite for testing if DATABASE_URL is not set, or a default PG URL.
-    DATABASE_URL: str = "postgresql://postgres:123456@localhost:15432/fastaistackdb"
+    DATABASE_URL: str = "postgresql://postgres:123456@localhost:15432/fastagentdb"
     SECRET_KEY: str = "your-secret-key-for-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7 # 7 days
