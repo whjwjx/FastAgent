@@ -9,6 +9,7 @@ passlib[bcrypt]==1.7.4
 python-multipart==0.0.9
 alembic==1.13.1
 openai==1.13.3
+pgvector==0.2.5
 
 # Testing
 pytest==8.1.1

@@ -11,9 +11,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7 # 7 days
     
     LLM_API_KEY: Optional[str] = None
-    LLM_BASE_URL: str = "https://ark.cn-beijing.volces.com/api/v3"
-    LLM_MODEL: str = "doubao-1-5-lite-32k-250115"
-    LLM_MODEL_PRO: str = "doubao-1-5-pro-32k-250115"
+    LLM_BASE_URL: Optional[str] = None
+    LLM_MODEL: Optional[str] = None
+    LLM_MODEL_PRO: Optional[str] = None
+    EMBEDDING_MODEL: Optional[str] = None
     
     # Search API
     TAVILY_API_KEY: Optional[str] = None
@@ -22,9 +23,14 @@ class Settings(BaseSettings):
         # 简单的多模型切换架构：
         # 如果文本较长或包含复杂的指令特征，则使用 PRO 模型以保证提取准确率，否则使用 LITE 模型以降低成本。
         complex_keywords = ["总结", "分析", "提取", "提取出", "详细", "翻译"]
+        
+        # 优先使用配置的模型，如果没有配置则返回空字符串或抛出异常
+        model_pro = self.LLM_MODEL_PRO or self.LLM_MODEL or ""
+        model_lite = self.LLM_MODEL or ""
+        
         if len(text) > 500 or any(kw in text for kw in complex_keywords):
-            return self.LLM_MODEL_PRO
-        return self.LLM_MODEL
+            return model_pro
+        return model_lite
     
     class Config:
         env_file = ".env"

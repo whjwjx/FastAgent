@@ -5,12 +5,16 @@ from database.session import get_db
 from models.models import Thought, User
 from schemas.schemas import ThoughtCreate, ThoughtUpdate, ThoughtResponse
 from api.deps import get_current_user
+from services.embedding_service import get_embedding
 
 router = APIRouter()
 
 @router.post("/", response_model=ThoughtResponse)
 def create_thought(thought: ThoughtCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_thought = Thought(**thought.model_dump(), user_id=current_user.id)
+    # Generate embedding based on original content
+    embedding = get_embedding(thought.original_content) if thought.original_content else None
+    
+    db_thought = Thought(**thought.model_dump(), user_id=current_user.id, embedding=embedding)
     db.add(db_thought)
     db.commit()
     db.refresh(db_thought)
@@ -48,6 +52,10 @@ def update_thought(
     update_data = thought_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_thought, key, value)
+    
+    # Regenerate embedding if original_content is updated
+    if "original_content" in update_data:
+        db_thought.embedding = get_embedding(update_data["original_content"])
         
     db.commit()
     db.refresh(db_thought)

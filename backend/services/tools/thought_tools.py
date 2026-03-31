@@ -1,12 +1,24 @@
 from sqlalchemy.orm import Session
 from models.models import Thought, User
+from services.embedding_service import get_embedding
+import logging
+
+logger = logging.getLogger(__name__)
 
 def tool_create_thought(db: Session, current_user: User, **kwargs):
+    original_content = kwargs.get("original_content")
+    refined_content = kwargs.get("refined_content")
+    
+    # Generate embedding based on original content
+    logger.info(f"Agent tool: creating thought for user {current_user.id}")
+    embedding = get_embedding(original_content) if original_content else None
+    
     thought = Thought(
         user_id=current_user.id,
-        original_content=kwargs.get("original_content"),
-        refined_content=kwargs.get("refined_content"),
-        tags=kwargs.get("tags")
+        original_content=original_content,
+        refined_content=refined_content,
+        tags=kwargs.get("tags"),
+        embedding=embedding
     )
     db.add(thought)
     db.commit()
@@ -34,6 +46,8 @@ def tool_update_thought(db: Session, current_user: User, **kwargs):
     
     if "original_content" in kwargs:
         thought.original_content = kwargs["original_content"]
+        # Regenerate embedding if content is updated
+        thought.embedding = get_embedding(kwargs["original_content"])
     if "refined_content" in kwargs:
         thought.refined_content = kwargs["refined_content"]
     if "tags" in kwargs:

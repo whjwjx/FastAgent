@@ -4,6 +4,7 @@ from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.types import TypeDecorator, JSON
 from database.session import Base
 from datetime import datetime, timezone
+from pgvector.sqlalchemy import Vector
 
 class StringArray(TypeDecorator):
     """
@@ -39,6 +40,8 @@ class Thought(Base):
     original_content = Column(Text, nullable=False)
     refined_content = Column(Text, nullable=True)
     tags = Column(StringArray, nullable=True)  # Store as PostgreSQL ARRAY or JSON
+    is_public = Column(Boolean, default=False, index=True)
+    embedding = Column(Vector(2048), nullable=True) # Doubao multimodal embedding is 2048 dims
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     is_deleted = Column(Boolean, default=False, index=True)

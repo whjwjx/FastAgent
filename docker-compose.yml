@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   db:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: fastai-postgres
     restart: always
     environment:
@@ -13,7 +13,8 @@ services:
     ports:
       - "15432:5432"
     volumes:
-      - fastai_postgres_data:/var/lib/postgresql/data
+      - fastaistack_fastai_postgres_data:/var/lib/postgresql/data
 
 volumes:
-  fastai_postgres_data:
+  fastaistack_fastai_postgres_data:
+    external: true

@@ -23,11 +23,13 @@ class ThoughtCreate(BaseModel):
     original_content: str
     refined_content: Optional[str] = None
     tags: Optional[List[str]] = None
+    is_public: Optional[bool] = False
 
 class ThoughtUpdate(BaseModel):
     original_content: Optional[str] = None
     refined_content: Optional[str] = None
     tags: Optional[List[str]] = None
+    is_public: Optional[bool] = None
 
 class ThoughtResponse(ThoughtCreate):
     id: int
