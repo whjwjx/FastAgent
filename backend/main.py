@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 from database.session import engine
 from models import models
-from api import auth, thoughts, chat, assistant, schedules
+from api import auth, thoughts, chat, assistant, schedules, garden
 
 # Create tables
 models.Base.metadata.create_all(bind=engine)
@@ -32,6 +32,7 @@ app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(thoughts.router, prefix="/api/thoughts", tags=["thoughts"])
 app.include_router(schedules.router, prefix="/api/schedules", tags=["schedules"])
 app.include_router(assistant.router, prefix="/api/assistant", tags=["assistant"])
+app.include_router(garden.router, prefix="/api/garden", tags=["garden"])
 
 @app.get("/")
 def read_root():

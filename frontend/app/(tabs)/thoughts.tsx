@@ -1,21 +1,16 @@
-import { useEffect, useState } from 'react';
-import { StyleSheet, FlatList, Text, View, ActivityIndicator } from 'react-native';
+import { useEffect, useState, useCallback } from 'react';
+import { StyleSheet, View, Text, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getThoughts } from '../../api/agent';
 import { useIsFocused } from '@react-navigation/native';
+import { GardenFeed } from '../../components/GardenFeed';
 
 export default function ThoughtsScreen() {
-  const [thoughts, setThoughts] = useState<{id: string, original_content: string, refined_content?: string, tags?: string[], created_at: string}[]>([]);
+  const [thoughts, setThoughts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const isFocused = useIsFocused();
 
-  useEffect(() => {
-    if (isFocused) {
-      fetchThoughts();
-    }
-  }, [isFocused]);
-
-  const fetchThoughts = async () => {
+  const fetchThoughts = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getThoughts();
@@ -25,12 +20,18 @@ export default function ThoughtsScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isFocused) {
+      fetchThoughts();
+    }
+  }, [isFocused, fetchThoughts]);
 
   if (loading && thoughts.length === 0) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#007AFF" />
       </View>
     );
   }
@@ -38,18 +39,10 @@ export default function ThoughtsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.header}>My Thoughts</Text>
-      <FlatList
-        data={thoughts}
-        keyExtractor={item => item.id.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.content}>{item.original_content}</Text>
-            {item.tags && item.tags.length > 0 ? <Text style={styles.tags}>Tags: {item.tags.join(', ')}</Text> : null}
-            <Text style={styles.date}>{new Date(item.created_at).toLocaleString()}</Text>
-          </View>
-        )}
-        ListEmptyComponent={<Text style={styles.emptyText}>No thoughts recorded yet.</Text>}
-        contentContainerStyle={styles.listContent}
+      <GardenFeed 
+        thoughts={thoughts} 
+        mode="owner" 
+        onRefresh={fetchThoughts} 
       />
     </SafeAreaView>
   );
@@ -70,36 +63,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     padding: 20,
     backgroundColor: '#fff',
-  },
-  listContent: {
-    padding: 16,
-  },
-  card: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  content: {
-    fontSize: 16,
-    marginBottom: 8,
-  },
-  tags: {
-    fontSize: 12,
-    color: '#007AFF',
-    marginBottom: 4,
-  },
-  date: {
-    fontSize: 12,
-    color: '#888',
-  },
-  emptyText: {
-    textAlign: 'center',
-    color: '#888',
-    marginTop: 40,
   }
 });

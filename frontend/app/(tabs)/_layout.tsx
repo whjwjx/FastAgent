@@ -45,6 +45,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="garden"
+        options={{
+          title: 'Garden',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="leaf" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="schedules"
         options={{
           title: 'Schedules',

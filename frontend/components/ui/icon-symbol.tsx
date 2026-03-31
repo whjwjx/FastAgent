@@ -20,6 +20,9 @@ const MAPPING = {
   'chevron.right': 'chevron-right',
   'message.fill': 'chat',
   'list.bullet': 'list',
+  'leaf': 'local-florist',
+  'calendar': 'event',
+  'rectangle.portrait.and.arrow.right': 'logout',
 } as IconMapping;
 
 /**

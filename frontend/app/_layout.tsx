@@ -26,8 +26,9 @@ export default function RootLayout() {
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const isPublicGarden = segments[0] === 'share' || segments[0] === 'garden';
 
-    if (!token && !inAuthGroup) {
+    if (!token && !inAuthGroup && !isPublicGarden) {
       // Redirect to the sign-in page.
       router.replace('/(auth)/login');
     } else if (token && inAuthGroup) {
@@ -46,6 +47,8 @@ export default function RootLayout() {
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="share/[token]" options={{ title: 'Shared Garden', headerShown: true }} />
+        <Stack.Screen name="garden/[slug]" options={{ title: 'Digital Garden', headerShown: true }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
       <StatusBar style="auto" />

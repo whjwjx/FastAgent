@@ -62,3 +62,29 @@ class ScheduleResponse(ScheduleCreate):
     updated_at: datetime
     class Config:
         from_attributes = True
+
+class GardenConfigBase(BaseModel):
+    theme: Optional[int] = 1
+    slug: Optional[str] = None
+    share_token: Optional[str] = None
+    is_share_open: Optional[bool] = False
+    custom_domain: Optional[str] = None
+    custom_html: Optional[str] = None
+    custom_css: Optional[str] = None
+
+class GardenConfigUpdate(GardenConfigBase):
+    pass
+
+class GardenConfigResponse(GardenConfigBase):
+    id: int
+    user_id: int
+    updated_at: datetime
+    class Config:
+        from_attributes = True
+
+class SharedGardenResponse(BaseModel):
+    owner_nickname: str
+    owner_avatar: Optional[str] = None
+    owner_bio: Optional[str] = None
+    config: GardenConfigResponse
+    thoughts: List[ThoughtResponse]

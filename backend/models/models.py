@@ -31,6 +31,23 @@ class User(Base):
     
     thoughts = relationship("Thought", back_populates="owner")
     schedules = relationship("Schedule", back_populates="owner")
+    garden_config = relationship("GardenConfig", back_populates="owner", uselist=False)
+
+class GardenConfig(Base):
+    __tablename__ = "garden_configs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, index=True)
+    theme = Column(Integer, default=1) # 1=简约风, 2=时间线风, 3=花园卡片风
+    slug = Column(String, unique=True, index=True, nullable=True)
+    share_token = Column(String, unique=True, index=True, nullable=True)
+    is_share_open = Column(Boolean, default=False, index=True)
+    custom_domain = Column(String, unique=True, index=True, nullable=True)
+    custom_html = Column(Text, nullable=True)
+    custom_css = Column(Text, nullable=True)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    
+    owner = relationship("User", back_populates="garden_config")
 
 class Thought(Base):
     __tablename__ = "thoughts"
