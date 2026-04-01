@@ -1,13 +1,13 @@
-# 🚀 FastAgent
+# 🚀 FastXpoAgent
 
 <p align="center">
-  <img src="public/multi_task_agent.png" alt="FastAgent - Multi-Task Agent" width="600"/>
+  <img src="public/multi_task_agent.png" alt="FastXpoAgent - Multi-Task Agent" width="600"/>
 </p>
 
-FastAgent 是一个基于 **AI Agent 架构** 和 **前后端极致分离理念** 构建的多用户、轻量级 AI 助手平台。
+FastXpoAgent 是一个基于 **AI Agent 架构** 和 **前后端极致分离理念** 构建的多用户、轻量级 AI 助手平台。
 
 <p align="center">
-  <img src="public/main_view_chatbot.png" alt="FastAgent Chatbot" width="300"/>
+  <img src="public/main_view_chatbot.png" alt="FastXpoAgent Chatbot" width="300"/>
 </p>
 
 <p align="center">
@@ -144,7 +144,7 @@ npx expo start
 
 ## 🤝 欢迎与联系
 
-欢迎大家使用 FastAgent！🎉 让我们一起打造更全能、更智能的个人助手，把所有数字化的繁琐任务都交给 AI 打理！
+欢迎大家使用 FastXpoAgent！🎉 让我们一起打造更全能、更智能的个人助手，把所有数字化的繁琐任务都交给 AI 打理！
 
 如果你觉得这个项目对你有帮助，或者对 AI Agent 与前后端分离架构感兴趣，**请给我点个 Star ⭐️ 或者 Fork 关注我的后续更新！** 等我更新更多有趣的功能。
 

@@ -16,7 +16,7 @@ from api import auth, thoughts, chat, assistant, schedules, garden
 # Create tables
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="FastAgent MVP", description="个人AI助手（多用户版） API", version="1.0.0")
+app = FastAPI(title="FastXpoAgent MVP", description="个人AI助手（多用户版） API", version="1.0.0")
 
 # CORS middleware for frontend access
 app.add_middleware(
@@ -36,4 +36,4 @@ app.include_router(garden.router, prefix="/api/garden", tags=["garden"])
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to FastAgent Backend MVP API"}
+    return {"message": "Welcome to FastXpoAgent Backend MVP API"}

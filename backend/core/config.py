@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 from typing import Optional
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "FastAgent MVP"
+    PROJECT_NAME: str = "FastXpoAgent MVP"
     # To run locally without PostgreSQL easily if needed, we can use SQLite for MVP quick test, but PRD specifies PostgreSQL.
     # We will use SQLite for testing if DATABASE_URL is not set, or a default PG URL.
     DATABASE_URL: str = "postgresql://postgres:123456@localhost:15432/fastagentdb"

@@ -22,7 +22,7 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>FastAgent</Text>
+      <Text style={styles.title}>FastXpoAgent</Text>
       <TextInput
         style={styles.input}
         placeholder="Username"

@@ -1,4 +1,4 @@
--- FastAgent Database Schema Export
+-- FastXpoAgent Database Schema Export
 
 CREATE TABLE users (
 	id SERIAL NOT NULL, 

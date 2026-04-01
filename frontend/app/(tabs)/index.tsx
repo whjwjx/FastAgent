@@ -263,7 +263,7 @@ export default function ChatScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>FastAgent Assistant</Text>
+        <Text style={styles.headerTitle}>FastXpoAgent Assistant</Text>
         <TouchableOpacity onPress={handleClearHistory} style={styles.clearBtn}>
           <Text style={styles.clearBtnText}>Clear</Text>
         </TouchableOpacity>

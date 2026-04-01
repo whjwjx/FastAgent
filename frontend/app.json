@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "FastAgent",
-    "slug": "fastagent",
+    "name": "FastXpoAgent",
+    "slug": "fastxpoagent",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "fastagent",
+    "scheme": "fastxpoagent",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
