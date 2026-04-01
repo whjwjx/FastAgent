@@ -6,6 +6,7 @@ import { useAuthStore } from '../../store/authStore';
 import ConfirmationBubble from '../../components/ConfirmationBubble';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Markdown from 'react-native-markdown-display';
+import { useLocalSearchParams } from 'expo-router';
 
 export type Message = {
   id: string;
@@ -26,7 +27,15 @@ export default function ChatScreen() {
   const [inputText, setInputText] = useState('');
   const { token } = useAuthStore();
   const flatListRef = useRef<FlatList>(null);
+  const params = useLocalSearchParams<{ initialMessage?: string }>();
   
+  // Handle initial message from other screens (like blog synthesis)
+  useEffect(() => {
+    if (params?.initialMessage) {
+      setInputText(params.initialMessage);
+    }
+  }, [params?.initialMessage]);
+
   // Load chat history on mount
   useEffect(() => {
     const loadHistory = async () => {

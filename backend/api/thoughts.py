@@ -24,6 +24,7 @@ def create_thought(thought: ThoughtCreate, db: Session = Depends(get_db), curren
 def get_thoughts(
     keyword: Optional[str] = None,
     tag: Optional[str] = None,
+    thought_type: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -35,6 +36,8 @@ def get_thoughts(
         )
     if tag:
         query = query.filter(Thought.tags.any(tag))
+    if thought_type:
+        query = query.filter(Thought.thought_type == thought_type)
         
     return query.order_by(Thought.created_at.desc()).all()
 

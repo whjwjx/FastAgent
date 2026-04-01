@@ -8,6 +8,8 @@ interface Thought {
   original_content: string;
   refined_content?: string;
   tags?: string[];
+  thought_type?: string;
+  source_ids?: string[];
   is_public: boolean;
   created_at: string;
 }
@@ -22,6 +24,9 @@ interface GardenFeedProps {
     bio?: string;
   };
   ListHeaderComponent?: React.ReactNode;
+  selectable?: boolean;
+  selectedIds?: number[];
+  onToggleSelect?: (id: number) => void;
 }
 
 export const GardenFeed: React.FC<GardenFeedProps> = ({ 
@@ -29,7 +34,10 @@ export const GardenFeed: React.FC<GardenFeedProps> = ({
   mode, 
   onRefresh, 
   ownerInfo,
-  ListHeaderComponent 
+  ListHeaderComponent,
+  selectable = false,
+  selectedIds = [],
+  onToggleSelect
 }) => {
   const togglePrivacy = async (id: number, currentPublic: boolean) => {
     if (mode !== 'owner') return;
@@ -41,32 +49,73 @@ export const GardenFeed: React.FC<GardenFeedProps> = ({
     }
   };
 
-  const renderItem = ({ item }: { item: Thought }) => (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString()}</Text>
-        {mode === 'owner' && (
-          <TouchableOpacity onPress={() => togglePrivacy(item.id, item.is_public)}>
+  const renderItem = ({ item }: { item: Thought }) => {
+    const isBlog = item.thought_type === 'blog' || item.thought_type === 'weekly_report' || item.thought_type === 'fitness_report';
+    const isSelected = selectedIds.includes(item.id);
+
+    const handlePress = () => {
+      if (selectable && onToggleSelect) {
+        onToggleSelect(item.id);
+      }
+    };
+
+    return (
+      <TouchableOpacity 
+        activeOpacity={selectable ? 0.7 : 1}
+        onPress={handlePress}
+        style={[
+          styles.card, 
+          isBlog && styles.blogCard,
+          isSelected && styles.selectedCard
+        ]}
+      >
+        {selectable && (
+          <View style={styles.checkboxContainer}>
             <MaterialCommunityIcons 
-              name={item.is_public ? "earth" : "lock"} 
-              size={20} 
-              color={item.is_public ? "#4CAF50" : "#9E9E9E"} 
+              name={isSelected ? "checkbox-marked-circle" : "checkbox-blank-circle-outline"} 
+              size={24} 
+              color={isSelected ? "#007AFF" : "#CCC"} 
             />
-          </TouchableOpacity>
+          </View>
         )}
-      </View>
-      
-      <Text style={styles.content}>{item.original_content}</Text>
-      
-      {item.tags && item.tags.length > 0 && (
-        <View style={styles.tagContainer}>
-          {item.tags.map(tag => (
-            <Text key={tag} style={styles.tag}>#{tag}</Text>
-          ))}
+        
+        <View style={styles.cardContent}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString()}</Text>
+            {mode === 'owner' && !selectable && (
+              <TouchableOpacity onPress={() => togglePrivacy(item.id, item.is_public)}>
+                <MaterialCommunityIcons 
+                  name={item.is_public ? "earth" : "lock"} 
+                  size={20} 
+                  color={item.is_public ? "#4CAF50" : "#9E9E9E"} 
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          {isBlog && (
+            <View style={styles.blogBadge}>
+              <Text style={styles.blogBadgeText}>
+                {item.thought_type === 'blog' ? 'Blog' : item.thought_type === 'weekly_report' ? 'Weekly' : 'Report'}
+              </Text>
+            </View>
+          )}
+
+          <Text style={[styles.content, isBlog && styles.blogContent]}>
+            {item.original_content}
+          </Text>
+          
+          {item.tags && item.tags.length > 0 && (
+            <View style={styles.tagContainer}>
+              {item.tags.map(tag => (
+                <Text key={tag} style={styles.tag}>#{tag}</Text>
+              ))}
+            </View>
+          )}
         </View>
-      )}
-    </View>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <FlatList
@@ -124,12 +173,43 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
+    flexDirection: 'row',
+  },
+  selectedCard: {
+    borderColor: '#007AFF',
+    borderWidth: 1,
+    backgroundColor: '#F8FBFF',
+  },
+  checkboxContainer: {
+    marginRight: 12,
+    justifyContent: 'center',
+  },
+  cardContent: {
+    flex: 1,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
+  },
+  blogCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#007AFF',
+    backgroundColor: '#FAFAFA',
+  },
+  blogBadge: {
+    backgroundColor: '#007AFF',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginBottom: 10,
+  },
+  blogBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   date: {
     fontSize: 12,
@@ -139,6 +219,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     color: '#333',
+  },
+  blogContent: {
+    fontWeight: '500',
+    color: '#111',
   },
   tagContainer: {
     flexDirection: 'row',

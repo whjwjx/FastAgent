@@ -43,8 +43,9 @@ export const createConfirmStream = (actionId: string, toolCalls: any[], isCancel
   });
 };
 
-export const getThoughts = async () => {
-  const response = await client.get('/thoughts/');
+export const getThoughts = async (thought_type?: string) => {
+  const params = thought_type ? { thought_type } : {};
+  const response = await client.get('/thoughts/', { params });
   return response.data;
 };
 

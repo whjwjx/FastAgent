@@ -19,19 +19,26 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
-class ThoughtCreate(BaseModel):
+class ThoughtBase(BaseModel):
     original_content: str
     refined_content: Optional[str] = None
-    tags: Optional[List[str]] = None
+    tags: Optional[List[str]] = []
+    thought_type: Optional[str] = "idea"
+    source_ids: Optional[List[str]] = None
     is_public: Optional[bool] = False
+
+class ThoughtCreate(ThoughtBase):
+    pass
 
 class ThoughtUpdate(BaseModel):
     original_content: Optional[str] = None
     refined_content: Optional[str] = None
     tags: Optional[List[str]] = None
+    thought_type: Optional[str] = None
+    source_ids: Optional[List[str]] = None
     is_public: Optional[bool] = None
 
-class ThoughtResponse(ThoughtCreate):
+class ThoughtResponse(ThoughtBase):
     id: int
     user_id: int
     created_at: datetime

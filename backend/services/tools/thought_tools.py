@@ -8,9 +8,11 @@ logger = logging.getLogger(__name__)
 def tool_thought_crud_create(db: Session, current_user: User, **kwargs):
     original_content = kwargs.get("original_content")
     refined_content = kwargs.get("refined_content")
+    thought_type = kwargs.get("thought_type", "idea")
+    source_ids = kwargs.get("source_ids")
     
     # Generate embedding based on original content
-    logger.info(f"[ThoughtSkill] Creating thought for user {current_user.id}")
+    logger.info(f"[ThoughtSkill] Creating thought for user {current_user.id}, type: {thought_type}")
     embedding = get_embedding(original_content) if original_content else None
     
     thought = Thought(
@@ -18,12 +20,14 @@ def tool_thought_crud_create(db: Session, current_user: User, **kwargs):
         original_content=original_content,
         refined_content=refined_content,
         tags=kwargs.get("tags"),
+        thought_type=thought_type,
+        source_ids=source_ids,
         embedding=embedding
     )
     db.add(thought)
     db.commit()
     db.refresh(thought)
-    logger.info(f"[ThoughtSkill] Created thought ID: {thought.id}")
+    logger.info(f"[ThoughtSkill] Created thought ID: {thought.id}, type: {thought_type}")
     return {"status": "success", "message": "想法记录成功", "thought_id": thought.id}
 
 def tool_thought_crud_read(db: Session, current_user: User, **kwargs):
@@ -98,14 +102,16 @@ THOUGHT_TOOLS_SCHEMA = [
         "type": "function",
         "function": {
             "name": "thought:crud:create",
-            "description": "记录用户的想法、笔记或灵感",
-            "label": "记录想法",
+            "description": "记录用户的想法、笔记或生成长文博客/报告。当用户要求总结、生成博客或报告时，请设定 thought_type 字段。",
+            "label": "记录想法/长文",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "original_content": {"type": "string", "description": "用户原始的想法内容"},
-                    "refined_content": {"type": "string", "description": "AI润色或整理后的想法内容"},
-                    "tags": {"type": "array", "items": {"type": "string"}, "description": "相关的标签列表，例如：['工作', '日常', '灵感']"}
+                    "original_content": {"type": "string", "description": "用户原始的想法内容，或生成的长文博客/报告的 Markdown 内容。"},
+                    "refined_content": {"type": "string", "description": "AI润色或整理后的想法内容。如果是生成的长文，这里可留空。"},
+                    "tags": {"type": "array", "items": {"type": "string"}, "description": "相关的标签列表，例如：['工作', '日常', '灵感', '周报']"},
+                    "thought_type": {"type": "string", "description": "内容类型，可选值包括：'idea' (普通想法, 默认), 'blog' (博客长文), 'weekly_report' (周报), 'fitness_report' (健身报告) 等。"},
+                    "source_ids": {"type": "array", "items": {"type": "string"}, "description": "如果有来源想法（例如从多条想法合成博客），在此提供它们的 ID 列表作为字符串数组，例如：['1', '2', '3']。"}
                 },
                 "required": ["original_content"]
             }

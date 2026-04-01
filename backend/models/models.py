@@ -57,6 +57,8 @@ class Thought(Base):
     original_content = Column(Text, nullable=False)
     refined_content = Column(Text, nullable=True)
     tags = Column(StringArray, nullable=True)  # Store as PostgreSQL ARRAY or JSON
+    thought_type = Column(String, default="idea", index=True) # idea, blog, weekly_report, etc.
+    source_ids = Column(StringArray, nullable=True) # Store source thought IDs as strings
     is_public = Column(Boolean, default=False, index=True)
     embedding = Column(Vector(2048), nullable=True) # Doubao multimodal embedding is 2048 dims
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
