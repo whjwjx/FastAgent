@@ -47,11 +47,11 @@ def test_assistant_record_thought(client: TestClient, auth_headers: dict, mock_o
             mock_message = MagicMock()
             
             mock_tool_call = MagicMock()
-            mock_tool_call.function.name = "record_thought"
+            mock_tool_call.function.name = "thought:crud:create"
             mock_tool_call.function.arguments = '{"original_content": "明天准备重构一下前台的交互", "tags": "工作"}'
             
             mock_message.tool_calls = [mock_tool_call]
-            mock_message.model_dump.return_value = {"role": "assistant", "tool_calls": [{"function": {"name": "record_thought", "arguments": '{"original_content": "明天准备重构一下前台的交互", "tags": "工作"}'}}]}
+            mock_message.model_dump.return_value = {"role": "assistant", "tool_calls": [{"function": {"name": "thought:crud:create", "arguments": '{"original_content": "明天准备重构一下前台的交互", "tags": "工作"}'}}]}
             mock_resp.choices = [MagicMock()]
             mock_resp.choices[0].message = mock_message
             return mock_resp
@@ -79,11 +79,11 @@ def test_assistant_create_schedule(client: TestClient, auth_headers: dict, mock_
             mock_message = MagicMock()
             
             mock_tool_call = MagicMock()
-            mock_tool_call.function.name = "create_schedule"
+            mock_tool_call.function.name = "schedule:crud:create"
             mock_tool_call.function.arguments = '{"title": "项目周会", "start_time": "2026-03-24T15:00:00", "location": "A会议室"}'
             
             mock_message.tool_calls = [mock_tool_call]
-            mock_message.model_dump.return_value = {"role": "assistant", "tool_calls": [{"function": {"name": "create_schedule", "arguments": '{"title": "项目周会", "start_time": "2026-03-24T15:00:00", "location": "A会议室"}'}}]}
+            mock_message.model_dump.return_value = {"role": "assistant", "tool_calls": [{"function": {"name": "schedule:crud:create", "arguments": '{"title": "项目周会", "start_time": "2026-03-24T15:00:00", "location": "A会议室"}'}}]}
             mock_resp.choices = [MagicMock()]
             mock_resp.choices[0].message = mock_message
             return mock_resp

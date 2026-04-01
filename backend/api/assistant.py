@@ -182,14 +182,14 @@ def ask_assistant_stream(
                                     # 简单映射一下给前端展示的友好名称
                                     tool_name_mapping = {
                                         "search_web": "联网搜索",
-                                        "tool_create_thought": "记录想法",
-                                        "tool_read_thoughts": "查询想法",
-                                        "tool_update_thought": "更新想法",
-                                        "tool_delete_thought": "删除想法",
-                                        "tool_create_schedule": "创建日程",
-                                        "tool_read_schedules": "查询日程",
-                                        "tool_update_schedule": "更新日程",
-                                        "tool_delete_schedule": "删除日程"
+                                        "thought:crud:create": "记录想法",
+                                        "thought:crud:read": "查询想法",
+                                        "thought:crud:update": "更新想法",
+                                        "thought:crud:delete": "删除想法",
+                                        "schedule:crud:create": "创建日程",
+                                        "schedule:crud:read": "查询日程",
+                                        "schedule:crud:update": "更新日程",
+                                        "schedule:crud:delete": "删除日程"
                                     }
                                     cn_name = tool_name_mapping.get(func_name, func_name)
                                     status_msg = f"正在执行: {cn_name}..."
@@ -217,7 +217,9 @@ def ask_assistant_stream(
                 requires_confirmation = False
                 for index, tool_call in tool_calls_accumulator.items():
                     func_name = tool_call["function"]["name"]
-                    if func_name not in ["search_web", "tool_read_thoughts", "tool_read_schedules"]:
+                    # 只要不是查询类或搜索类工具，都需要确认
+                    is_query = any(kw in func_name for kw in ["read", "search", "get", "list"])
+                    if not is_query:
                         requires_confirmation = True
                         break
                 
@@ -241,10 +243,12 @@ def ask_assistant_stream(
                     except json.JSONDecodeError:
                         function_args = {}
                         
-                    logger.info(f"[User ID: {current_user.id}] Executing tool: {function_name} with args: {function_args}")
+                    logger.info(f"[User ID: {current_user.id}] [Skill Request] Calling: {function_name} with args: {function_args}")
                     
                     # 执行工具
                     result = execute_tool(function_name, db, current_user, user_tz=user_tz, **function_args)
+                    
+                    logger.info(f"[User ID: {current_user.id}] [Skill Result] Received for: {function_name}")
                     
                     # 将工具执行结果添加到消息列表
                     messages.append({

@@ -21,12 +21,51 @@ type ConfirmationBubbleProps = {
 
 // 简单映射一下给前端展示的友好名称
 const toolNameMapping: Record<string, string> = {
-  "tool_create_thought": "记录想法",
-  "tool_update_thought": "更新想法",
-  "tool_delete_thought": "删除想法",
-  "tool_create_schedule": "创建日程",
-  "tool_update_schedule": "更新日程",
-  "tool_delete_schedule": "删除日程"
+  "thought:crud:create": "记录想法",
+  "thought:crud:read": "查询想法",
+  "thought:crud:update": "更新想法",
+  "thought:crud:delete": "删除想法",
+  "create_schedule": "创建日程",
+  "read_schedules": "查询日程",
+  "update_schedule": "更新日程",
+  "delete_schedule": "删除日程"
+};
+
+/**
+ * 解析工具名，支持 namespace 格式，例如 thought:crud:create
+ * 返回一个更友好的显示名称
+ */
+const getToolDisplayName = (name: string) => {
+  if (toolNameMapping[name]) return toolNameMapping[name];
+  
+  if (name.includes(':')) {
+    const parts = name.split(':');
+    // 如果是 thought:crud:create，取最后一部分并首字母大写，或者根据前缀映射
+    const lastPart = parts[parts.length - 1];
+    const prefix = parts[0];
+    
+    const prefixMap: Record<string, string> = {
+      'thought': '想法',
+      'blog': '博客',
+      'garden': '花园',
+      'stats': '统计'
+    };
+    
+    const actionMap: Record<string, string> = {
+      'create': '新增',
+      'update': '修改',
+      'delete': '删除',
+      'read': '查询',
+      'list': '列表'
+    };
+    
+    const prefixCn = prefixMap[prefix] || prefix;
+    const actionCn = actionMap[lastPart] || lastPart;
+    
+    return `${prefixCn}-${actionCn}`;
+  }
+  
+  return name;
 };
 
 export default function ConfirmationBubble({
@@ -90,7 +129,7 @@ export default function ConfirmationBubble({
 
       {toolCalls.map((tc, index) => {
         const funcName = tc.function?.name || '';
-        const displayName = toolNameMapping[funcName] || funcName;
+        const displayName = getToolDisplayName(funcName);
         const args = parsedArgsList[index];
 
         return (
