@@ -38,20 +38,3 @@ def tool_search_web(db: Session, current_user: User, **kwargs):
     except Exception as e:
         logger.error(f"[SearchSkill] Search failed: {str(e)}")
         return {"status": "error", "message": f"搜索执行失败: {str(e)}"}
-
-SEARCH_TOOLS_SCHEMA = [
-    {
-        "type": "function",
-        "function": {
-            "name": "search_web",
-            "description": "联网搜索工具。当你需要获取最新资讯、实时信息或你的静态知识库无法回答的问题时调用此工具。",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string", "description": "搜索关键词，尽量精准"}
-                },
-                "required": ["query"]
-            }
-        }
-    }
-]

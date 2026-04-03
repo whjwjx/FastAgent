@@ -130,9 +130,11 @@ npx expo start
 
 ## 🗺️ 后续规划 (Roadmap)
 
-- [ ] **物理 Skill 隔离架构**
+- [x] **物理 Skill 隔离架构** (已完成模块化拆分)
 - [ ] **ThoughtSkill 增强**
 - [ ] **BlogSkill (博客相关)**
+  - 将博客内容从 `thoughts` 表中独立建表 (`blogs` 表)，包含标题、状态、阅读量等专有字段。
+  - 建立多对多的关联溯源关系 (`blog_thought_relations` 表)，明确展示“一篇博客由哪些零散灵感组合而成”，以及“某个想法被引用在了哪些博客中”。
 - [ ] **GardenSkill (数字花园)**
 - [ ] **StatsSkill (统计图表)**
 - [ ] **多模态能力**
